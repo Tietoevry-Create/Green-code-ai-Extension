@@ -1,0 +1,46 @@
+{
+  "name": "green-code-ai",
+  "displayName": "Green-Code-AI",
+  "description": "Code review for sustainability and green code practices",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.83.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Geirtieto/Green-code-ai-Extension.git"
+},
+  "main": "./out/extension.js",
+  "categories": [
+    "Snippets"
+  ],
+  "scripts": {
+    "compile": "tsc"
+  },
+
+  "activationEvents": [
+    "onCommand:extension.runPythonScript"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "extension.runPythonScript",
+        "title": "Run Python Script"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "typescript",
+        "path": "./snippets/snippets.code-snippets"
+      }
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.4",
+    "@types/vscode": "^1.83.0",
+    "babel-loader": "^9.1.3",
+    "typescript": "^5.2.2",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4"
+  }
+}
