@@ -1,2 +1,4 @@
 node_modules
 activities
+out
+*.vsix
