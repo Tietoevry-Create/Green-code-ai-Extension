@@ -82,24 +82,34 @@ function checkForNewFiles() {
   }
 }
 
-
+const conversationHistory: any[] = [];
 
 function capitalizeFirstLetter(input:string) {
   return input.charAt(0).toUpperCase() + input.slice(1);
 }
 
 
-function generatePrompt(question: string, context: string) {
+function generatePrompt(question: string, context: string, conversationHistory: any[]) {
   
 
   const capitalizedContext = capitalizeFirstLetter(context);
   const capitalizedQuestion = capitalizeFirstLetter(question);
 
+  const messages = conversationHistory.map(message => {
+    return `${message.role}: ${message.content}`;
+  });
+
+  // Add the user's current question
+  messages.push(`User: ${capitalizedQuestion}`);
+
+  // Join all the messages into a single string
+  const fullPrompt = messages.join('\n');
+
   return `Fulfill the following request based on the given context:
 
   "${capitalizedContext}"
   
-  ${capitalizedQuestion}`
+  ${fullPrompt}`;
 }
 
 vscode.commands.registerCommand('greenCoding.start', async () => {
@@ -115,7 +125,7 @@ vscode.commands.registerCommand('greenCoding.start', async () => {
       try {
         const context = fs.readFileSync(contextFilePath, 'utf8'); 
         const response = await axios.post('https://api.openai.com/v1/engines/gpt-3.5-turbo-instruct/completions', {
-            prompt: generatePrompt(question, context), 
+            prompt: generatePrompt(question, context, conversationHistory), 
             max_tokens: 100,
             temperature: 0.6
         }, {
@@ -125,7 +135,16 @@ vscode.commands.registerCommand('greenCoding.start', async () => {
         });
   
         const answer = response.data.choices[0].text;
+        
+        const timestamp = new Date().toISOString();
+
+        conversationHistory.push({ role: "user", content: question, timestamp });
+        conversationHistory.push({ role: "assistant", content: answer, timestamp });
+
+        console.log(conversationHistory)
+
         vscode.window.showInformationMessage(`Answer: ${answer}`);
+
       } catch (error: any) {
         console.error('Error:', error.message); // Improve the error message
         vscode.window.showErrorMessage(`Error: ${error.message}`);
