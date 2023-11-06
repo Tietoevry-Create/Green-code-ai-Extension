@@ -1,0 +1,6 @@
+node_modules
+.env
+.vscode/tasks.json
+activities/
+green-code-ai-0.0.1.vsix
+out/
