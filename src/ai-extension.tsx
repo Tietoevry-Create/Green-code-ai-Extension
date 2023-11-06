@@ -18,7 +18,7 @@ export class AIExtension {
         this.registerCommands();
         this.setupEventListeners();
     }
-
+    
     private registerCommands() {
         const disposable = vscode.commands.registerCommand('greenCoding.start', () => {
             const editor = vscode.window.activeTextEditor;

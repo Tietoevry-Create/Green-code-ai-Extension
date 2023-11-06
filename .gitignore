@@ -3,3 +3,4 @@ activities
 out
 *.vsix
 .vscode
+.env

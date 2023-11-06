@@ -1,86 +1,99 @@
 // ai-integration.ts
+import * as vscode from 'vscode';
 import { OpenAIClient, AzureKeyCredential } from '@azure/openai';
+import { FileManager } from './filemanager'
+import { RetrievalQAChain } from "langchain/chains";
+import { HNSWLib } from "langchain/vectorstores/hnswlib";
+import { TextLoader } from "langchain/document_loaders/fs/text";
+import { OpenAI } from 'langchain/llms/openai';
+import { OpenAIEmbeddings } from 'langchain/embeddings/openai';
+import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
+
+
+
 const fs = require('fs');
 const path = require('path');
-import * as vscode from 'vscode';
-import { readFiles, checkForNewFiles } from  "./CheckFiles";
-
-
-
 
 
 export class AIIntegration {
     private apiKey: string;
+    
 
     constructor(apiKey: string) {
         this.apiKey = apiKey;
+        
     }
 
     public async sendToAIForAnalysis(code: string) {
-        readFiles();
-        checkForNewFiles();
+        
 
-        const conversationHistory: any[] = [];
+        const fileManager = new FileManager(); // Create a new instance of FileManager
+        fileManager.checkForNewFiles();
+        fileManager.readFiles();
+
+        
         const contextFilePath = path.join(__dirname, '..', 'context.txt');
+        
 
-        // Implement the AI request and response handling here
-        try {
-            const question = 'How can I make the following code more sustainable and energy-efficient?: ' + code;
-            const context = fs.readFileSync(contextFilePath, 'utf8');
+        const llm = new OpenAI({
+            temperature: 0.9,
+            azureOpenAIApiKey: this.apiKey,
+            azureOpenAIApiVersion: "2023-07-01-preview",
+            azureOpenAIApiInstanceName: "gpt-35-turbo-instruct",
+            azureOpenAIApiDeploymentName: "deployment-01",
+            azureOpenAIBasePath: "https://green-code-advisor.openai.azure.com/openai/deployments"
+        })
         
-            const client = new OpenAIClient(
-                "https://green-code-advisor.openai.azure.com/",
-                new AzureKeyCredential(this.apiKey)
-            );
+        const embeddings = new OpenAIEmbeddings({
+            azureOpenAIApiDeploymentName: 'deployment-04',
+            azureOpenAIApiVersion: '2022-12-01',
+            azureOpenAIApiKey: this.apiKey,
+            azureOpenAIBasePath: "https://green-code-advisor.openai.azure.com/openai/deployments"
+        })
         
-            const startTime = Date.now();
         
-            const response = await client.getChatCompletions("deployment-03", [
-                {
-                    "role": "system", "content": `Fulfill the following request based on the given context:
-                    Make it as a list of pointers. Do not write any text that is not within the pointers.
-                    ${context}
-                    `
-                },
-                {
-                    "role": "user", "content": question
-                },
-            ], {
-                maxTokens: 500,
-                temperature: 0.6,
+        const textSplitter = new RecursiveCharacterTextSplitter({
+            chunkSize: 500,
+            chunkOverlap: 25,
+        })
+        
+        const rawDocs = await loadData(contextFilePath);
+        const docs = await textSplitter.splitDocuments(rawDocs);        
+
+        async function loadData(file:any) {
+            const loader = new TextLoader(file);
+            const rawDocs = await loader.load();
+            return rawDocs;
+          }
+        
+        
+
+        const vectorStore = await HNSWLib.fromDocuments(docs, embeddings);
+        const startTime = Date.now();
+
+        async function qaDocument(question:any, vectorstores:any) {
+            const retriever = vectorstores.asRetriever({ k: 10 });
+            const chain = RetrievalQAChain.fromLLM(llm, retriever, {
+                returnSourceDocuments: true
             });
-        
-            const endTime = Date.now();
+            const response = await chain.call({
+                query:question,
+            });
+
+            const endTime = Date.now();     
+            const timeTaken = endTime - startTime;
+            console.log(timeTaken/1000 + " seconds.");   
             
-            if (response && response.choices) {
-                const choices = response.choices;
-                if (choices.length > 0) {
-                    const answer = choices[0]?.message?.content;
-                
-                    if (answer) {
-                        conversationHistory.push({ role: 'assistant', content: answer });
-        
-                        const pointsArray = answer.split(". ");
-        
-                        // Join the points back together with new lines to create a structured response.
-                        const structuredAnswer = pointsArray.join("\n");
-                        console.log(structuredAnswer);
-                        vscode.window.showInformationMessage(`AI Response: ${structuredAnswer}`);
-                        const timeTaken = endTime - startTime;
-                        console.log(timeTaken / 1000 + " seconds.");
-                    } else {
-                        console.log('Not a valid answer');
-                    }
-                } else {
-                    console.log('No choices found in the response');
-                }
-            } else {
-                console.log('Response is undefined or does not contain choices');
-            }
-        } catch (error) {
-            // Handle errors here, you can log the error or take appropriate action.
-            console.error("An error occurred:", error);
+            console.log(response.text)
+            
+            
+            vscode.window.showInformationMessage(response.text);  
         }
+            
+            const question = 'How can I make the following code more sustainable and energy-efficient?:' + code + '. Include the most important points as a pointer list. Make the feedback specific to the codesnippet.';
+            
+            qaDocument(question, vectorStore);                                                                                                                                                             
          
-    }   
+     }   
 }
+
