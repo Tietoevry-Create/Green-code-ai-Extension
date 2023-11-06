@@ -11,9 +11,9 @@
   "activationEvents": [],
   "repository": {
     "type": "git",
-    "url": "https://github.com/Geirtieto/Green-code-ai-Extension.git"
+    "url": "https://github.com/tietoevryCreate/Green-code-ai-Extension.git"
   },
-  "main": "./out/extension.js",
+  "main": "./out/main.js",
   "categories": [
     "Snippets"
   ],
@@ -28,6 +28,14 @@
         "command": "greenCoding.start",
         "title": "Start Green Coding",
         "category": "Green Code AI"
+      },
+      {
+        "command": "your_extension_id.postMessage",
+        "title": "Post Message Command"
+      },
+      {
+        "command": "your_extension_id.aiResponse",
+        "title": "AI Response Command"
       }
     ],
     "snippets": [
@@ -46,7 +54,19 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
+    "@azure/openai": "^1.0.0-beta.6",
+    "@pinecone-database/pinecone": "^1.1.1",
     "axios": "^1.5.1",
-    "openai": "^4.12.1"
+    "chroma": "^0.0.1",
+    "chromadb": "^1.5.11",
+    "dotenv": "^16.3.1",
+    "hnswlib-node": "^1.4.2",
+    "langchain": "^0.0.170",
+    "lib": "^5.1.0",
+    "natural": "^6.8.0",
+    "node-nlp": "^4.27.0",
+    "openai": "^4.12.1",
+    "pinecone": "^0.1.0",
+    "svelte": "^4.2.2"
   }
 }
