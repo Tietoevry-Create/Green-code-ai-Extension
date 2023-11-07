@@ -37,12 +37,6 @@
         "command": "your_extension_id.aiResponse",
         "title": "AI Response Command"
       }
-    ],
-    "snippets": [
-      {
-        "language": "typescript",
-        "path": "./snippets/snippets.code-snippets"
-      }
     ]
   },
   "devDependencies": {
