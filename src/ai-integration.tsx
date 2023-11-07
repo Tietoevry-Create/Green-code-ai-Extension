@@ -20,7 +20,7 @@ export class AIIntegration {
         
     }
 
-    public async sendToAIForAnalysis(code: string) {
+    public async sendToAIForAnalysis(code: string): Promise<string> {
         
 
         const fileManager = new FileManager(); // Create a new instance of FileManager
@@ -29,7 +29,6 @@ export class AIIntegration {
 
         
         const contextFilePath = path.join(__dirname, '..', 'context.txt');
-        let responseText = "";
 
         const llm = new OpenAI({
             temperature: 0.9,
@@ -65,7 +64,7 @@ export class AIIntegration {
         const vectorStore = await HNSWLib.fromDocuments(docs, embeddings);
         const startTime = Date.now();
 
-        async function qaDocument(question:any, vectorstores:any) {
+        async function qaDocument(question:any, vectorstores:any): Promise<string> {
             const retriever = vectorstores.asRetriever({ k: 10 });
             const chain = RetrievalQAChain.fromLLM(llm, retriever, {
                 returnSourceDocuments: true
@@ -76,19 +75,14 @@ export class AIIntegration {
 
             const endTime = Date.now();     
             const timeTaken = endTime - startTime;
-            console.log(timeTaken/1000 + " seconds.");   
+            console.log(timeTaken/1000 + " seconds.");
             
-            responseText += response;
-            
-            
-            vscode.window.showInformationMessage(response.text);  
+            vscode.window.showInformationMessage(response.text);
+            return response.text;
         }
             
         const question = 'How can I make the following code more sustainable and energy-efficient?:' + code + '. Include the most important points as a pointer list. Make the feedback specific to the codesnippet.';
-        qaDocument(question, vectorStore);
-        
-        return responseText;
-         
+        return await qaDocument(question, vectorStore);
      }   
 }
 

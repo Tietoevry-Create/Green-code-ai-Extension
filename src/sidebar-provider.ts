@@ -51,7 +51,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     let text = "";
                     await aiIntegration.sendToAIForAnalysis(editor.document.getText(editor.selection)).then((value) => {text = value});
 
-                    this._view?.webview.postMessage({ type: "onSelectedText", value: text ? text != "" : "Failed loading response" });
+                    if (text) {
+                        this._view?.webview.postMessage({ type: "onSelectedText", value: text });
+                    } else {
+                        this._view?.webview.postMessage({ type: "onSelectedText", value: "Failed loading response" });
+                    }
                     break;
                 }
                 case "onInfo": {
