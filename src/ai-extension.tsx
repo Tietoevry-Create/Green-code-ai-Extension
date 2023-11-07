@@ -1,63 +1,25 @@
 // ai-extension.ts
 import * as vscode from 'vscode';
-import { AIMarker } from './ai-marker';
-import { AIIntegration } from './ai-integration';
+import { SidebarProvider } from './sidebar-provider';
 
-export class AIExtension {
-    private context: vscode.ExtensionContext;
-    private aiMarker: AIMarker;
-    private aiIntegration: AIIntegration;
+export function activate(context: vscode.ExtensionContext) {
 
-    constructor(context: vscode.ExtensionContext) {
-        this.context = context;
-        this.aiMarker = new AIMarker();
-        this.aiIntegration = new AIIntegration(process.env['OPENAI-API-KEY'] || '');
-    }
+	// Register the Sidebar Panel
+	const sidebarProvider = new SidebarProvider(context.extensionUri);
 
-    activate() {
-        this.registerCommands();
-        this.setupEventListeners();
-    }
-    
-    private registerCommands() {
-        const disposable = vscode.commands.registerCommand('greenCoding.start', () => {
-            const editor = vscode.window.activeTextEditor;
-            if (editor) {
-                this.aiMarker.markCodeSnippet(editor);
-                const markedRanges = this.aiMarker.getMarkedRanges(editor);
-                if (markedRanges) {
-                    markedRanges.forEach((range) => {
-                        const markedCode = editor.document.getText(range);
-                        this.aiIntegration.sendToAIForAnalysis(markedCode);
-                    });
-                }
-            }
-        });
+    context.subscriptions.push(
+        vscode.window.registerWebviewViewProvider(
+            "green-code-ai-sidebar",
+            sidebarProvider
+        )
+    );
 
-        this.context.subscriptions.push(disposable);
-    }
+	// Register a custom command
+	context.subscriptions.push(vscode.commands.registerCommand('greenCoding.start', () => {
+        
+    }));
 
-    private setupEventListeners() {
-        vscode.window.onDidChangeTextEditorSelection((e) => {
-            const editor = e.textEditor;
-
-            if (editor) {
-                const markedRanges = this.aiMarker.getMarkedRanges(editor);
-                if (markedRanges) {
-                    const selection = editor.selection;
-
-                    // Check if the selection intersects with any marked range
-                    const intersectsMarkedRange = markedRanges.some((range) =>
-                        range.contains(selection.start) || range.contains(selection.end)
-                    );
-
-                    if (!intersectsMarkedRange) {
-                        // Remove the decoration and clear the data about the marked code
-                        editor.setDecorations(this.aiMarker.decorationType, []);
-                        this.aiMarker.clearMarkedRanges(editor);
-                    }
-                }
-            }
-        });
-    }
 }
+
+// this method is called when your extension is deactivated
+export function deactivate() { }

@@ -3,4 +3,5 @@ activities
 out
 *.vsix
 .vscode
+svelte-app
 .env

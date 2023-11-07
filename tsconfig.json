@@ -16,7 +16,11 @@
       },
       "jsx": "react" 
     },
-    "include": ["src/**/*.tsx"],
+    "include": [
+      "src/**/*.tsx", 
+      "src/ai-extension.ts", 
+      "src/sidebar-provider.ts"    
+    ],
     "exclude": [
       "node_modules"
     ]

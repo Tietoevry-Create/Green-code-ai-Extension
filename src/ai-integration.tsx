@@ -1,6 +1,5 @@
 // ai-integration.ts
 import * as vscode from 'vscode';
-import { OpenAIClient, AzureKeyCredential } from '@azure/openai';
 import { FileManager } from './filemanager'
 import { RetrievalQAChain } from "langchain/chains";
 import { HNSWLib } from "langchain/vectorstores/hnswlib";
@@ -9,9 +8,6 @@ import { OpenAI } from 'langchain/llms/openai';
 import { OpenAIEmbeddings } from 'langchain/embeddings/openai';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 
-
-
-const fs = require('fs');
 const path = require('path');
 
 
@@ -24,7 +20,7 @@ export class AIIntegration {
         
     }
 
-    public async sendToAIForAnalysis(code: string) {
+    public async sendToAIForAnalysis(code: string): Promise<string> {
         
 
         const fileManager = new FileManager(); // Create a new instance of FileManager
@@ -33,7 +29,6 @@ export class AIIntegration {
 
         
         const contextFilePath = path.join(__dirname, '..', 'context.txt');
-        
 
         const llm = new OpenAI({
             temperature: 0.9,
@@ -64,14 +59,12 @@ export class AIIntegration {
             const loader = new TextLoader(file);
             const rawDocs = await loader.load();
             return rawDocs;
-          }
-        
-        
+        }
 
         const vectorStore = await HNSWLib.fromDocuments(docs, embeddings);
         const startTime = Date.now();
 
-        async function qaDocument(question:any, vectorstores:any) {
+        async function qaDocument(question:any, vectorstores:any): Promise<string> {
             const retriever = vectorstores.asRetriever({ k: 10 });
             const chain = RetrievalQAChain.fromLLM(llm, retriever, {
                 returnSourceDocuments: true
@@ -82,18 +75,14 @@ export class AIIntegration {
 
             const endTime = Date.now();     
             const timeTaken = endTime - startTime;
-            console.log(timeTaken/1000 + " seconds.");   
+            console.log(timeTaken/1000 + " seconds.");
             
-            console.log(response.text)
-            
-            
-            vscode.window.showInformationMessage(response.text);  
+            vscode.window.showInformationMessage(response.text);
+            return response.text;
         }
             
-            const question = 'How can I make the following code more sustainable and energy-efficient?:' + code + '. Include the most important points as a pointer list. Make the feedback specific to the codesnippet.';
-            
-            qaDocument(question, vectorStore);                                                                                                                                                             
-         
+        const question = 'How can I make the following code more sustainable and energy-efficient?:' + code + '. Include the most important points as a pointer list. Make the feedback specific to the codesnippet.';
+        return await qaDocument(question, vectorStore);
      }   
 }
 
