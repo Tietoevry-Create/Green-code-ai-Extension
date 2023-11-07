@@ -1,4 +1,4 @@
-Code Review.md,Green Code Practices.md,Measure Footprint.md,Review Infrastructure Need.md,Static Analysis.md,Sustainability Preview.md,Sustainability Review.md,test.md
+Code Review.md,Code Snippets.md,Green Code Practices.md,Measure Footprint.md,Review Infrastructure Need.md,Static Analysis.md,Sustainability Preview.md,Sustainability Review.md,test.md
 ---
 activity: Code Review
 project: Meteor
@@ -26,6 +26,135 @@ SDLC phase: code/build
 6. **Follow-up**: After the code review, schedule a follow-up meeting to discuss the actions taken by the development team based on the code review feedback.
 
 7. **Reporting and Metrics**: Regularly report on energy consumption metrics and improvement to help track progress and reinforce the importance of green code practices.
+
+aaaaaaaaa
+Efficient algorithms and data structures
+
+A more efficient solution is to use a hash table that has a constant time complexity of O(1). The hash table stores each element of the array as a key and the number of its occurrences as a value. The function then simply counts the number of the element it is looking for in the hash table.
+
+def count_elements_hash_table(arr, element):
+    count_table = {}
+    for i in range(len(arr)):
+        if arr[i] in count_table:
+            count_table[arr[i]] += 1
+        else:
+            count_table[arr[i]] = 1
+    if element in count_table:
+        return count_table[element]
+    else:
+        return 0
+
+-----------------------------------------------------------------------------------------
+
+Energy-efficient hardware usage in the calculation of Fibonacci numbers
+
+The Fibonacci sequence is a popular mathematical sequence that is often used as an example of recursive functions. However, a simple recursive implementation of the Fibonacci function has a high time complexity and can therefore be very computationally intensive.
+
+One way to make the computation of Fibonacci numbers more energy-efficient is to use memoization. Memoization means that results of functions are cached to avoid unnecessary computations.
+
+Recursive Fibonacci function without memoization:
+
+def fibonacci_recursive(n):
+    if n < 2:
+        return n
+    return fibonacci_recursive(n-1) + fibonacci_recursive(n-2)
+
+For the Fibonacci function with memoization:
+
+def fibonacci_memoization(n, memo):
+    if n in memo:
+        return memo[n]
+    if n < 2:
+        memo[n] = n
+    else:
+        memo[n] = fibonacci_memoization(n-1, memo) + fibonacci_memoization(n-2, memo)
+    return memo[n]
+
+def fibonacci(n):
+    memo = {}
+    return fibonacci_memoization(n, memo)
+
+As can be seen, the `fibonacci_memoization` function stores the results in a memo dictionary to avoid unnecessary calculations. By using memoization, the number of computations is reduced, resulting in improved energy efficiency.
+
+-----------------------------------------------------------------------------------------------
+
+Green Coding Example 3: Efficient Data Processing with List Comprehension
+
+Another important aspect of green coding is the efficient processing of data. Large amounts of data can be very computationally intensive and thus cause high energy consumption. Energy consumption can be reduced by using efficient data structures and algorithms.
+
+One way to optimize data processing is to minimize the number of loop passes required. Loops are usually very computationally intensive because they can perform a large number of calculations.
+
+Another approach is to use parallelization. Many modern computers have multiple cores that can operate simultaneously. By dividing tasks among multiple cores, computing power can be used more efficiently.
+
+In Python, there is an efficient way to minimize loops: List Comprehension. List Comprehension is a short syntax to create lists from other lists without having to use loops.
+
+An example that calculates the square numbers from 0 to 9, initially without List Comprehension:
+
+Example of bad Green Coding Practice. :
+
+squares = []
+for i in range(10):
+    squares.append(i**2)
+Here we see the code with List Comprehension:
+
+Example of 
+
+squares = [i**2 for i in range(10)]
+As you can see, the List Comprehension variant is shorter and faster than the loop variant. By using List Comprehension, developers can reduce the number of loop passes and thus reduce energy consumption.
+
+By processing data efficiently, developers can reduce the energy consumption of their software and thus contribute to sustainability.
+
+---------------------------------------------------------------------------------
+
+Green Coding Example 4: Resource-saving design through the use of caching
+
+Now, we have resource-efficient design. This means that developers should take care to use resources such as CPU, memory, and network bandwidth as efficiently as possible when designing software.
+
+An example of resource-efficient design is the use of caching. Caching is a technique of holding frequently used data in memory to speed up access to that data. Using caching can reduce network bandwidth and CPU power requirements.
+
+Another approach to resource-efficient design is the use of lazy loading. Lazy loading is a technique where data is loaded only when it is needed. By using lazy loading, developers can reduce the memory footprint of their software because data that is not needed is not held in memory.
+
+The following is an example of how to use caching in Python to reduce network bandwidth requirements:
+
+```python
+import requests
+from functools import lru_cache
+
+@lru_cache(maxsize=128)
+def get_data_from_api(query):
+    response = requests.get("https://api.example.com/data", params={"q": query})
+    return response.json()
+
+------------------------------------------------------------
+
+Green Coding Example 5: Energy-efficient implementation, use of sleep statements
+
+Finally, implementing energy-efficient code is another important aspect of green coding. This involves optimizing the way code is executed to reduce energy consumption.
+
+One example of energy-efficient implementation is the use of sleep statements. Sleep statements are pauses in the code that cause the processor to enter a sleep state for a certain amount of time. This can reduce the power consumption of the processor.
+
+Another example is the use of asynchronous code. Asynchronous code executes multiple tasks simultaneously without the processor having to wait for the result of a single task. This can reduce the processor’s energy consumption because it does not have to wait unnecessarily for tasks to finish.
+
+The following is an example of how to use sleep statements in Python to reduce power consumption:
+
+python
+
+import time
+
+def process_data(data):
+    # Data processing
+    time.sleep(1)  # 1-second pause
+
+data1 = [1, 2, 3, 4, 5]
+data2 = [6, 7, 8, 9, 10]
+
+for d in data1:
+    process_data(d)
+
+for d in data2:
+    process_data(d)
+
+
 
 ---
 activity: Green Code Practices
@@ -290,5 +419,3 @@ audience:
 
 ---
 #Test Action
-
-lorem ipsum og så viderwe
