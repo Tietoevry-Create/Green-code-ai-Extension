@@ -3,10 +3,7 @@ import { OpenAIClient, AzureKeyCredential } from '@azure/openai';
 const fs = require('fs');
 const path = require('path');
 import * as vscode from 'vscode';
-import { readFiles, checkForNewFiles } from  "./CheckFiles";
-
-
-
+import { readFiles, checkForNewFiles } from  "./ai-filereader";
 
 
 export class AIIntegration {
@@ -16,12 +13,13 @@ export class AIIntegration {
         this.apiKey = apiKey;
     }
 
-    public async sendToAIForAnalysis(code: string) {
+    public async sendToAIForAnalysis(code: string): Promise<string> {
         readFiles();
         checkForNewFiles();
 
         const conversationHistory: any[] = [];
         const contextFilePath = path.join(__dirname, '..', 'context.txt');
+        let responseText = "";
 
         // Implement the AI request and response handling here
         try {
@@ -68,19 +66,24 @@ export class AIIntegration {
                         vscode.window.showInformationMessage(`AI Response: ${structuredAnswer}`);
                         const timeTaken = endTime - startTime;
                         console.log(timeTaken / 1000 + " seconds.");
+
+                        responseText += structuredAnswer;
                     } else {
-                        console.log('Not a valid answer');
+                        responseText += 'Not a valid answer';
                     }
                 } else {
-                    console.log('No choices found in the response');
+                    responseText += 'No choices found in the response';
                 }
             } else {
-                console.log('Response is undefined or does not contain choices');
+                responseText += 'Response is undefined or does not contain choices';
             }
+
+            // send resonse to sidebar
+            return responseText;
+            
         } catch (error) {
             // Handle errors here, you can log the error or take appropriate action.
-            console.error("An error occurred:", error);
+            return "An error occurred:" + error;
         }
-         
     }   
 }

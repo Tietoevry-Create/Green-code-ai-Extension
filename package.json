@@ -13,7 +13,7 @@
     "type": "git",
     "url": "https://github.com/Geirtieto/Green-code-ai-Extension.git"
   },
-  "main": "./out/extension.js",
+  "main": "./out/main.js",
   "categories": [
     "Snippets"
   ],
@@ -23,17 +23,31 @@
     "clean": "rimraf out"
   },
   "contributes": {
+    "viewsContainers": {
+			"activitybar": [
+				{
+					"id": "green-code-ai-sidebar-view",
+					"title": "Green Code AI",
+					"icon": "static/GC-logo.png"
+				}
+			]
+		},
+    "views": {
+      "green-code-ai-sidebar-view": [
+				{
+					"type": "webview",
+					"id": "green-code-ai-sidebar",
+					"name": "Green Code AI",
+          "icon": "static/GC-logo.png",
+					"contextualTitle": "Green Code AI"
+				}
+      ]
+    },
     "commands": [
       {
         "command": "greenCoding.start",
         "title": "Start Green Coding",
         "category": "Green Code AI"
-      }
-    ],
-    "snippets": [
-      {
-        "language": "typescript",
-        "path": "./snippets/snippets.code-snippets"
       }
     ]
   },
@@ -46,7 +60,36 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
+    "@azure/openai": "^1.0.0-beta.7",
     "axios": "^1.5.1",
-    "openai": "^4.12.1"
+    "dotenv": "^16.3.1",
+    "i": "^0.3.7",
+    "openai": "^4.12.1",
+    "@rollup/plugin-commonjs": "^25.0.7",
+		"@rollup/plugin-node-resolve": "^15.2.3",
+		"@rollup/plugin-typescript": "^11.1.5",
+		"@tsconfig/svelte": "^5.0.2",
+		"@types/glob": "^8.1.0",
+		"@types/mocha": "^10.0.3",
+		"@types/node": "^20.8.10",
+		"@types/polka": "^0.5.6",
+		"@types/vscode": "^1.84.0",
+		"@typescript-eslint/eslint-plugin": "^6.10.0",
+		"@typescript-eslint/parser": "^6.10.0",
+		"concurrently": "^8.2.2",
+		"eslint": "^8.53.0",
+		"glob": "^10.3.10",
+		"mocha": "^10.2.0",
+		"rollup": "^4.3.0",
+		"rollup-plugin-svelte": "^7.1.6",
+		"@rollup/plugin-terser": "^0.4.4",
+		"svelte": "^4.2.2",
+		"svelte-check": "^3.5.2",
+		"svelte-preprocess": "^5.0.4",
+		"ts-loader": "^9.5.0",
+		"typescript": "^5.2.2",
+		"@vscode/test-electron": "^2.3.6",
+		"webpack": "^5.89.0",
+		"webpack-cli": "^5.1.4"
   }
 }
