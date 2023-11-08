@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
-import { AIMarker } from './ai-marker';
 import { AIIntegration } from './ai-integration';
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
@@ -89,10 +88,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             Utils.joinPath(this._extensionUri, "media", "vscode.css")
         );
         const scriptUri = webview.asWebviewUri(
-            Utils.joinPath(this._extensionUri, "out", "compiled/sidebar.js")
+            Utils.joinPath(this._extensionUri, "src", "compiled/sidebar.js")
         );
         const styleMainUri = webview.asWebviewUri(
-            Utils.joinPath(this._extensionUri, "out", "compiled/sidebar.css")
+            Utils.joinPath(this._extensionUri, "src", "compiled/sidebar.css")
         );
 
         // Use a nonce to only allow a specific script to be run.
