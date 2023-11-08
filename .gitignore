@@ -1,6 +1,8 @@
 node_modules
+activities
+out
+*.vsix
+.vscode
+svelte-app
 .env
 .vscode/tasks.json
-activities/
-green-code-ai-0.0.1.vsix
-out/
