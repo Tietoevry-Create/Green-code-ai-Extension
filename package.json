@@ -28,7 +28,7 @@
 				{
 					"id": "green-code-ai-sidebar-view",
 					"title": "Green Code AI",
-					"icon": "static/GC-logo.png"
+					"icon": "static/GC-logo-icon.png"
 				}
 			]
 		},
@@ -38,7 +38,7 @@
 					"type": "webview",
 					"id": "green-code-ai-sidebar",
 					"name": "Green Code AI",
-          "icon": "static/GC-logo.png",
+          "icon": "static/GC-logo-icon.png",
 					"contextualTitle": "Green Code AI"
 				}
       ]
