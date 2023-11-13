@@ -1,6 +1,5 @@
 // ai-integration.ts
 import * as vscode from 'vscode';
-import { FileManager } from './filemanager'
 import { RetrievalQAChain } from "langchain/chains";
 import { HNSWLib } from "langchain/vectorstores/hnswlib";
 import { TextLoader } from "langchain/document_loaders/fs/text";
@@ -21,12 +20,6 @@ export class AIIntegration {
     }
 
     public async sendToAIForAnalysis(code: string): Promise<string> {
-        
-
-        const fileManager = new FileManager(); // Create a new instance of FileManager
-        fileManager.checkForNewFiles();
-        fileManager.readFiles();
-
         
         const contextFilePath = path.join(__dirname, '..', 'context.txt');
 
