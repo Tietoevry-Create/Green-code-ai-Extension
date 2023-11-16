@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
 import { AIIntegration } from './ai-integration';
+import { TextFormatter } from './text-formatter';
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
     _view?: vscode.WebviewView;
@@ -49,9 +50,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
                     let text = "";
                     await aiIntegration.sendToAIForAnalysis(editor.document.getText(editor.selection)).then((value) => {text = value});
-
-                    if (text) {
-                        this._view?.webview.postMessage({ type: "onSelectedText", value: text });
+                    
+                    let formattedText = "";
+                    formattedText = new TextFormatter(text).formatText();
+                    // console.log(text + '\n\n' + "----------------" + '\n\n' + formattedText);
+                    
+                    if (formattedText) {
+                        this._view?.webview.postMessage({ type: "onSelectedText", value: formattedText });
                     } else {
                         this._view?.webview.postMessage({ type: "onSelectedText", value: "Failed loading response" });
                     }

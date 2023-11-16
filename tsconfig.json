@@ -14,7 +14,10 @@
       "paths": {
         "*": ["node_modules/*"]
       },
-      "jsx": "react" 
+      "jsx": "react",
+      "lib":[
+        "ES2021.String"
+      ]
     },
     "include": [
       "src/**/*.tsx", 

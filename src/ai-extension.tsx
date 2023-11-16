@@ -15,9 +15,9 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
 	// Register a custom command
-	context.subscriptions.push(vscode.commands.registerCommand('greenCoding.start', () => {
+	// context.subscriptions.push(vscode.commands.registerCommand('greenCoding.start', () => {
         
-    }));
+    // }));
 
 }
 

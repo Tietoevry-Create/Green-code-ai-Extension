@@ -2,7 +2,7 @@
     import { onDestroy, onMount } from "svelte";
 
     let text = "Highlight a piece of code and press `Get Feedback`!";
-    let textColor = "gray"
+    let textColor = "gray";
     let maxDivHeight = window.innerHeight - 150;
 
     function updateMaxDivHeight() {
@@ -12,6 +12,7 @@
     function fetchText() {
         tsvscode.postMessage({ type: "onFetchText", value: "" });
         text = "Loading...";
+        textColor = "gray";
     }
     
     onMount(() => {
