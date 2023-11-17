@@ -4,13 +4,14 @@
     let text = "Highlight a piece of code and press `Get Feedback`!";
     let textColor = "gray";
     let maxDivHeight = window.innerHeight - 150;
+    let regenResponse = false;
 
     function updateMaxDivHeight() {
         maxDivHeight = window.innerHeight - 150;
     }
 
     function fetchText() {
-        tsvscode.postMessage({ type: "onFetchText", value: "" });
+        tsvscode.postMessage({ type: "onFetchText", value: regenResponse });
         text = "Loading...";
         textColor = "gray";
     }
@@ -57,6 +58,17 @@
         margin-bottom: 8px;
     }
 
+    label.checkbox-label {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        margin: 8px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: smaller;
+    }
+
     button {
         width: 100%;
         box-sizing: border-box;
@@ -70,6 +82,11 @@
     .container {
         display: flex;
         flex-direction: column;
+    }
+
+    .editable-div-container {
+        position: relative;
+        width: 100%;
     }
 
     .editable-div {
@@ -89,16 +106,24 @@
 
 <div class="container">
     <h1>Green Coding</h1>
-    <label for="text"><b>Code Review</b></label>
-    <div
-        bind:innerHTML={text}
-        class="editable-div"
-        contenteditable="false"
-        style="color: {textColor}; max-height: {maxDivHeight}px;"
-        on:input={() => {
-            text = text.replace(/<\/?span[^>]*>/g, "");
-        }}
-    ></div>
+    <div class="editable-div-container">
+        <label for="text"><b>Code Review</b></label>
+        <div
+            bind:innerHTML={text}
+            class="editable-div"
+            contenteditable="false"
+            style="color: {textColor}; max-height: {maxDivHeight}px;"
+            on:input={() => {
+                text = text.replace(/<\/?span[^>]*>/g, "");
+            }}
+        ></div>
+        {#if textColor === "black"}
+            <label class="checkbox-label">
+                <input type="checkbox" bind:checked={regenResponse} />
+                Regenerate response
+            </label>
+        {/if}
+    </div>
     <button on:click={fetchText}>Get Feedback</button>
 </div>
 

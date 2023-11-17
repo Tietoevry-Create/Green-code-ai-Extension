@@ -6,7 +6,7 @@ export class TextFormatter {
     public formatText():string {
         this.separateParagraphs();
         this.rewriteListInHtml();
-        return this._output;
+        return this._output.trim();
     }
 
     private separateParagraphs() {
@@ -28,21 +28,19 @@ export class TextFormatter {
             output.push("</ol>");
             
             output.forEach((line) => {
-                line = line.trim();
+                let newline: string = line.trim();
 
-                if (this.isOrderedList(line)) {
-                    let modifiedLine = this.removeSpecialChar(line.slice(line.indexOf('.')+2,));
-
-                    if (this.isTitledList(modifiedLine)) {
-                        let colonIndex = line.indexOf(':');
-                        line = "<li>" + "<b>" + line.slice(3, colonIndex+1) + "</b>" + line.slice(colonIndex+1,) + "</li>";
+                if (this.isOrderedList(newline)) {
+                    if (this.isTitledList(newline)) {
+                        let colonIndex = newline.indexOf(':');
+                        newline = "<li>" + "<b>" + newline.slice(3, colonIndex+1) + "</b>" + newline.slice(colonIndex+1,) + "</li>";
                     }
                     else {
-                        line = "<li>" + line.slice(3,) + "</li>";
+                        newline = "<li>" + newline.slice(3,) + "</li>";
                     }
                 }
 
-                newOutput.push(line);
+                newOutput.push(newline);
             })
         }
         else if (this.isUnorderedList(this._output)) {
@@ -50,33 +48,31 @@ export class TextFormatter {
             output.push("</ul>");
             
             output.forEach((line) => {
-                line = line.trim();
+                let newline: string = line.trim();
 
-                if (this.isUnorderedList(line)) {
-                    let modifiedLine = this.removeSpecialChar(line.slice(line.indexOf('-')+2,));
-
-                    if (this.isTitledList(modifiedLine)) {
-                        let colonIndex = line.indexOf(':');
-                        line = "<li>" + "<b>" + line.slice(2, colonIndex+1) + "</b>" + line.slice(colonIndex+1,) + "</li>";
+                if (this.isUnorderedList(newline)) {
+                    if (this.isTitledList(newline)) {
+                        let colonIndex = newline.indexOf(':');
+                        newline = "<li>" + "<b>" + newline.slice(2, colonIndex+1) + "</b>" + newline.slice(colonIndex+1,) + "</li>";
                     }
                     else {
-                        line = "<li>" + line.slice(2,) + "</li>";
+                        newline = "<li>" + newline.slice(2,) + "</li>";
                     }
                 }
 
-                newOutput.push(line);
+                newOutput.push(newline);
             })
         }
         else {
             output.forEach((line) => {
-                line = line.trim();
+                let newline: string = line.trim();
 
-                if (this.isTitledList(line)) {
-                    let colonIndex = line.indexOf(':');
-                    line = "<b>" + line.slice(0, colonIndex+1) + "</b>" + line.slice(colonIndex+1);
+                if (this.isTitledList(newline)) {
+                    let colonIndex = newline.indexOf(':');
+                    newline = "<b>" + newline.slice(0, colonIndex+1) + "</b>" + newline.slice(colonIndex+1);
                 }
 
-                newOutput.push(line);
+                newOutput.push(newline);
             })
         }
 
@@ -84,27 +80,20 @@ export class TextFormatter {
     }
 
     private isOrderedList(text: string):boolean {
-        const ordredListPattern = /^\d+\.\s+/;
+        const ordredListPattern = /\d+\.\s+/;
         return ordredListPattern.test(text);
     }
 
     private isUnorderedList(text: string):boolean {
-        const unordredListPattern = /^-\s+/;
+        const unordredListPattern = /-\s+/;
         return unordredListPattern.test(text);
     }
 
     private isTitledList(text: string):boolean {
-        // const titledPattern = /^(?:[a-zA-Z]+\s|[a-zA-Z]+)+\:\s+/;
-        // return titledPattern.test(text);
         if (text.slice(0, text.length/2).includes(':')) {
             return true;
         }
         return false;
-    }
-
-    private removeSpecialChar(text: string):string {
-        return text.replaceAll('\'', '').replaceAll('"', '').replaceAll('(', '').replaceAll(')', '')
-            .replaceAll('.', '').replaceAll('-', '');
     }
 
 }

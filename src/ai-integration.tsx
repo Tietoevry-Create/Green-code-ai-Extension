@@ -6,26 +6,28 @@ import { TextLoader } from "langchain/document_loaders/fs/text";
 import { OpenAI } from 'langchain/llms/openai';
 import { OpenAIEmbeddings } from 'langchain/embeddings/openai';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
+import { Hashmap } from './hashmap';
 
 const path = require('path');
 
 
 export class AIIntegration {
-    private apiKey: string;
+    private _apiKey: string;
+    private _context?: vscode.ExtensionContext;
     
 
-    constructor(apiKey: string) {
-        this.apiKey = apiKey;
-        
+    constructor(apiKey: string, context: vscode.ExtensionContext | undefined) {
+        this._apiKey = apiKey;
+        this._context = context;
     }
 
-    public async sendToAIForAnalysis(code: string): Promise<string> {
+    public async sendToAIForAnalysis(code: string, regen:boolean): Promise<string> {
         
         const contextFilePath = path.join(__dirname, '..', 'context.txt');
 
         const llm = new OpenAI({
             temperature: 0.9,
-            azureOpenAIApiKey: this.apiKey,
+            azureOpenAIApiKey: this._apiKey,
             azureOpenAIApiVersion: "2023-07-01-preview",
             azureOpenAIApiInstanceName: "gpt-35-turbo-instruct",
             azureOpenAIApiDeploymentName: "deployment-01",
@@ -35,7 +37,7 @@ export class AIIntegration {
         const embeddings = new OpenAIEmbeddings({
             azureOpenAIApiDeploymentName: 'deployment-04',
             azureOpenAIApiVersion: '2022-12-01',
-            azureOpenAIApiKey: this.apiKey,
+            azureOpenAIApiKey: this._apiKey,
             azureOpenAIBasePath: "https://green-code-advisor.openai.azure.com/openai/deployments"
         })
         
@@ -75,7 +77,23 @@ export class AIIntegration {
         }
             
         const question = 'How can I make the following code more sustainable and energy-efficient?:' + code + '. Include the most important points as a pointer list. Make the feedback specific to the codesnippet.';
-        return await qaDocument(question, vectorStore);
-     }   
+        
+        if (!this._context) {
+            console.log("Failed to access context. Your responses will not be saved.")
+            return await qaDocument(question, vectorStore);
+        }
+        
+        let questionHash = new Hashmap(question).stringHash();
+        const storedData = this._context?.globalState.get<string>(questionHash.toString());
+
+        if (storedData && !regen) {
+            return storedData;
+        }
+
+        const result = await qaDocument(question, vectorStore);
+        this._context?.globalState.update(questionHash.toString(), result);
+
+        return result;
+     }
 }
 
