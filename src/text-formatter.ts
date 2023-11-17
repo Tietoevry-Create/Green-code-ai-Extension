@@ -6,7 +6,7 @@ export class TextFormatter {
     public formatText():string {
         this.separateParagraphs();
         this.rewriteListInHtml();
-        return this._output.trim();
+        return this._output;
     }
 
     private separateParagraphs() {
@@ -24,8 +24,7 @@ export class TextFormatter {
         let newOutput: string[] = [];
 
         if (this.isOrderedList(this._output)) {
-            output = ["<ol>"].concat(output);
-            output.push("</ol>");
+            let listOngoing = false;
             
             output.forEach((line) => {
                 let newline: string = line.trim();
@@ -38,14 +37,26 @@ export class TextFormatter {
                     else {
                         newline = "<li>" + newline.slice(3,) + "</li>";
                     }
+                    if (!listOngoing) {
+                        listOngoing = true;
+                        newline = "<ol>" + newline;
+                    }
+                }
+                else if (newline == '' || newline == '\n') {
+                    return;
+                }
+                else if (listOngoing) {
+                    listOngoing = false;
+                    newline = "</ol>" + newline;
                 }
 
                 newOutput.push(newline);
             })
+
+            newOutput.push("</ol>");
         }
         else if (this.isUnorderedList(this._output)) {
-            output = ["<ul>"].concat(output);
-            output.push("</ul>");
+            let listOngoing = false;
             
             output.forEach((line) => {
                 let newline: string = line.trim();
@@ -58,10 +69,23 @@ export class TextFormatter {
                     else {
                         newline = "<li>" + newline.slice(2,) + "</li>";
                     }
+                    if (!listOngoing) {
+                        listOngoing = true;
+                        newline = "<ul>" + newline;
+                    }
+                }
+                else if (newline == '' || newline == '\n') {
+                    return;
+                }
+                else if (listOngoing) {
+                    listOngoing = false;
+                    newline = "</ul>" + newline;
                 }
 
                 newOutput.push(newline);
             })
+
+            newOutput.push("</ul>");
         }
         else {
             output.forEach((line) => {

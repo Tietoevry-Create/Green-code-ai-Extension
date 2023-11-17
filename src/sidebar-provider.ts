@@ -55,7 +55,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     
                     let formattedText = "";
                     formattedText = new TextFormatter(text).formatText();
-                    // console.log(text + '\n\n' + "----------------" + '\n\n' + formattedText);
+                    console.log(text + '\n\n' + "----------------" + '\n\n' + formattedText);
                     
                     if (formattedText) {
                         this._view?.webview.postMessage({ type: "onSelectedText", value: formattedText });

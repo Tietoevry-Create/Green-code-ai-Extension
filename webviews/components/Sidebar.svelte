@@ -67,6 +67,10 @@
         align-items: center;
         gap: 4px;
         font-size: smaller;
+        background-color: black;
+        border-radius: 8px;
+        padding: 8px;
+        color: #fff;
     }
 
     button {
