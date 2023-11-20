@@ -1,12 +1,19 @@
 <script lang="ts">
-    import { onMount } from "svelte";
+    import { onDestroy, onMount } from "svelte";
 
-    let text = "";
-    let placeholder = "Highlight a piece of code and press `Get Feedback`!";
+    let text = "Highlight a piece of code and press `Get Feedback`!";
+    let textColor = "gray";
+    let maxDivHeight = window.innerHeight - 150;
+    let regenResponse = false;
+
+    function updateMaxDivHeight() {
+        maxDivHeight = window.innerHeight - 150;
+    }
 
     function fetchText() {
-        tsvscode.postMessage({ type: "onFetchText", value: "" });
-        placeholder = "Loading...";
+        tsvscode.postMessage({ type: "onFetchText", value: regenResponse });
+        text = "Loading...";
+        textColor = "gray";
     }
     
     onMount(() => {
@@ -16,15 +23,32 @@
             switch (message.type) {
                 case "onSelectedText": {
                     text = message.value;
+                    textColor = "black";
                     break;
                 }
             }
         });
+        window.addEventListener("resize", updateMaxDivHeight);
+    });
+
+    onDestroy(() => {
+        window.removeEventListener("resize", updateMaxDivHeight);
     });
 </script>
 
 
 <style>
+    @font-face {
+        font-family: DroidSerif;
+        src: url(../../static/DroidSerif-Regular-webfont.woff);
+    }
+
+    @font-face {
+        font-family: DroidSerif;
+        src: url(../../static/DroidSerif-Bold-webfont.woff);
+        font-weight: bold;
+    }
+
     h1 {
         text-align: center;
     }
@@ -34,12 +58,19 @@
         margin-bottom: 8px;
     }
 
-    textarea {
-        width: 100%;
-        resize: vertical;
-        box-sizing: border-box;
+    label.checkbox-label {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        margin: 8px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: smaller;
+        background-color: black;
+        border-radius: 8px;
         padding: 8px;
-        border: 1px solid #ccc;
+        color: #fff;
     }
 
     button {
@@ -57,24 +88,46 @@
         flex-direction: column;
     }
 
-    .container > div {
-        background-color: #f1f1f1;
-        margin: 10px;
-        padding: 20px;
-        font-size: 30px;
+    .editable-div-container {
+        position: relative;
+        width: 100%;
+    }
+
+    .editable-div {
+        width: 100%;
+        resize: vertical;
+        box-sizing: border-box;
+        padding: 8px;
+        border: 1px solid #ccc;
+        background-color: #fff;
+        font-family: DroidSerif;
+        min-height: 100px;
+        white-space: pre-wrap;
+		overflow-y: auto;
+        max-height: 800px;
     }
 </style>
 
 <div class="container">
     <h1>Green Coding</h1>
-    <label for="text"><b>Code Review</b></label>
-    <textarea
-        rows="15"
-        id="text"
-        bind:value={text}
-        readonly
-        placeholder={placeholder}
-    />
+    <div class="editable-div-container">
+        <label for="text"><b>Code Review</b></label>
+        <div
+            bind:innerHTML={text}
+            class="editable-div"
+            contenteditable="false"
+            style="color: {textColor}; max-height: {maxDivHeight}px;"
+            on:input={() => {
+                text = text.replace(/<\/?span[^>]*>/g, "");
+            }}
+        ></div>
+        {#if textColor === "black"}
+            <label class="checkbox-label">
+                <input type="checkbox" bind:checked={regenResponse} />
+                Regenerate response
+            </label>
+        {/if}
+    </div>
     <button on:click={fetchText}>Get Feedback</button>
 </div>
 

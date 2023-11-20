@@ -5,7 +5,7 @@ import { SidebarProvider } from './sidebar-provider';
 export function activate(context: vscode.ExtensionContext) {
 
 	// Register the Sidebar Panel
-	const sidebarProvider = new SidebarProvider(context.extensionUri);
+	const sidebarProvider = new SidebarProvider(context);
 
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider(
@@ -15,9 +15,9 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
 	// Register a custom command
-	context.subscriptions.push(vscode.commands.registerCommand('greenCoding.start', () => {
+	// context.subscriptions.push(vscode.commands.registerCommand('greenCoding.start', () => {
         
-    }));
+    // }));
 
 }
 

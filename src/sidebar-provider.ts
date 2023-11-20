@@ -1,13 +1,16 @@
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
 import { AIIntegration } from './ai-integration';
+import { TextFormatter } from './text-formatter';
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
     _view?: vscode.WebviewView;
     _doc?: vscode.TextDocument;
-    _context?: vscode.ExtensionContext;
+    _context: vscode.ExtensionContext;
 
-    constructor(private readonly _extensionUri: vscode.Uri) { }
+    constructor(private context: vscode.ExtensionContext) {
+        this._context = context;
+     }
     
     public resolveWebviewView(webviewView: vscode.WebviewView) {
         this._view = webviewView;
@@ -16,7 +19,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             // Allow scripts in the webview
             enableScripts: true,
 
-            localResourceRoots: [this._extensionUri],
+            localResourceRoots: [this._context.extensionUri],
         };
 
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
@@ -27,7 +30,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 case "onFetchText": {
                     // const editor = vscode.window.activeTextEditor;
                     // let aiMarker = new AIMarker();
-                    let aiIntegration = new AIIntegration(process.env['OPENAI_API_KEY'] || '');
+                    let aiIntegration = new AIIntegration(process.env['OPENAI_API_KEY'] || '', this._context);
                     // let text = ""
 
                     // if (editor) {
@@ -48,10 +51,14 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     }
 
                     let text = "";
-                    await aiIntegration.sendToAIForAnalysis(editor.document.getText(editor.selection)).then((value) => {text = value});
-
-                    if (text) {
-                        this._view?.webview.postMessage({ type: "onSelectedText", value: text });
+                    await aiIntegration.sendToAIForAnalysis(editor.document.getText(editor.selection), data.value).then((value) => {text = value});
+                    
+                    let formattedText = "";
+                    formattedText = new TextFormatter(text).formatText();
+                    console.log(text + '\n\n' + "----------------" + '\n\n' + formattedText);
+                    
+                    if (formattedText) {
+                        this._view?.webview.postMessage({ type: "onSelectedText", value: formattedText });
                     } else {
                         this._view?.webview.postMessage({ type: "onSelectedText", value: "Failed loading response" });
                     }
@@ -82,16 +89,16 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
     private _getHtmlForWebview(webview: vscode.Webview) {
         const styleResetUri = webview.asWebviewUri(
-            Utils.joinPath(this._extensionUri, "media", "reset.css")
+            Utils.joinPath(this._context.extensionUri, "media", "reset.css")
         );
         const styleVSCodeUri = webview.asWebviewUri(
-            Utils.joinPath(this._extensionUri, "media", "vscode.css")
+            Utils.joinPath(this._context.extensionUri, "media", "vscode.css")
         );
         const scriptUri = webview.asWebviewUri(
-            Utils.joinPath(this._extensionUri, "src", "compiled/sidebar.js")
+            Utils.joinPath(this._context.extensionUri, "src", "compiled/sidebar.js")
         );
         const styleMainUri = webview.asWebviewUri(
-            Utils.joinPath(this._extensionUri, "src", "compiled/sidebar.css")
+            Utils.joinPath(this._context.extensionUri, "src", "compiled/sidebar.css")
         );
 
         // Use a nonce to only allow a specific script to be run.
