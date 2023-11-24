@@ -41,7 +41,6 @@ export class AIIntegration {
             azureOpenAIBasePath: "https://green-code-advisor.openai.azure.com/openai/deployments"
         })
         
-        
         const textSplitter = new RecursiveCharacterTextSplitter({
             chunkSize: 500,
             chunkOverlap: 25,
