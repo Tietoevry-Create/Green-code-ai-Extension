@@ -27,9 +27,11 @@
             switch (message.type) {
                 case "onApiKeyExists": {
                     showApiPasswordPopup = true;
+                    break;
                 }
                 case "onApiKeyNotFound": {
                     showApiKeyPopup = true;
+                    break;
                 }
             }
         });

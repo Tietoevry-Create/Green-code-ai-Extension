@@ -20,7 +20,8 @@
   "scripts": {
     "compile": "tsc",
     "watch": "tsc -w",
-    "clean": "rimraf out"
+    "clean": "rimraf out",
+    "build": "cd .\\svelte-app && npx rollup -c && cd .. && type .\\svelte-app\\public\\build\\bundle.css > .\\src\\compiled\\sidebar.css && type .\\svelte-app\\public\\build\\bundle.js > .\\src\\compiled\\sidebar.js && type .\\svelte-app\\public\\build\\bundle.js.map > .\\src\\compiled\\sidebar.map"
   },
   "contributes": {
     "viewsContainers": {
