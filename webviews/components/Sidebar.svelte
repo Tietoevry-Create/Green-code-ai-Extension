@@ -1,19 +1,40 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte";
+    import ApiKeyPopup from "./ApiKeyPopup.svelte";
 
     let text = "Highlight a piece of code and press `Get Feedback`!";
     let textColor = "gray";
     let maxDivHeight = window.innerHeight - 150;
     let regenResponse = false;
+    let showApiKeyPopup = false;
+    let showApiPasswordPopup = false;
 
     function updateMaxDivHeight() {
         maxDivHeight = window.innerHeight - 150;
     }
 
+    function checkApiKey() {
+        return localStorage.getItem("openaiApiKey");
+    }
+
+    function checkApiPassword() {
+        return localStorage.getItem("openaiApiPassword");
+    }
+
     function fetchText() {
-        tsvscode.postMessage({ type: "onFetchText", value: regenResponse });
-        text = "Loading...";
-        textColor = "gray";
+        if (!checkApiKey()) {
+            showApiKeyPopup = true;
+            return;
+        }
+        else if (!checkApiPassword) {
+            showApiPasswordPopup = true;
+            return;
+        }
+        else {
+            tsvscode.postMessage({ type: "onFetchText", value: regenResponse });
+            text = "Loading...";
+            textColor = "gray"; 
+        }
     }
     
     onMount(() => {
@@ -33,6 +54,7 @@
 
     onDestroy(() => {
         window.removeEventListener("resize", updateMaxDivHeight);
+        localStorage.removeItem("openaiApiPassword");
     });
 </script>
 
@@ -107,28 +129,30 @@
         max-height: 800px;
     }
 </style>
-
-<div class="container">
-    <h1>Green Coding</h1>
-    <div class="editable-div-container">
-        <label for="text"><b>Code Review</b></label>
-        <div
-            bind:innerHTML={text}
-            class="editable-div"
-            contenteditable="false"
-            style="color: {textColor}; max-height: {maxDivHeight}px;"
-            on:input={() => {
-                text = text.replace(/<\/?span[^>]*>/g, "");
-            }}
-        ></div>
-        {#if textColor === "black"}
-            <label class="checkbox-label">
-                <input type="checkbox" bind:checked={regenResponse} />
-                Regenerate response
-            </label>
-        {/if}
+<div>
+    <ApiKeyPopup bind:showApiKeyPopup={showApiKeyPopup} bind:showApiPasswordPopup={showApiPasswordPopup}/>
+    <div class="container">
+        <h1>Green Coding</h1>
+        <div class="editable-div-container">
+            <label for="text"><b>Code Review</b></label>
+            <div
+                bind:innerHTML={text}
+                class="editable-div"
+                contenteditable="false"
+                style="color: {textColor}; max-height: {maxDivHeight}px;"
+                on:input={() => {
+                    text = text.replace(/<\/?span[^>]*>/g, "");
+                }}
+            ></div>
+            {#if textColor === "black"}
+                <label class="checkbox-label">
+                    <input type="checkbox" bind:checked={regenResponse} />
+                    Regenerate response
+                </label>
+            {/if}
+        </div>
+        <button on:click={fetchText}>Get Feedback</button>
     </div>
-    <button on:click={fetchText}>Get Feedback</button>
 </div>
 
 

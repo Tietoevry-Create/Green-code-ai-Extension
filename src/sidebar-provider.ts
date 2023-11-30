@@ -2,11 +2,15 @@ import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
 import { AIIntegration } from './ai-integration';
 import { TextFormatter } from './text-formatter';
+import { AESEncryption } from './aes-encryption';
+import { Hashmap } from './hashmap';
+import CryptoJS from 'crypto-js';
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
     _view?: vscode.WebviewView;
     _doc?: vscode.TextDocument;
     _context: vscode.ExtensionContext;
+    _apiPasswordHash: string;
 
     constructor(private context: vscode.ExtensionContext) {
         this._context = context;
@@ -27,22 +31,78 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         // Listen for messages from the Sidebar component and execute action
         webviewView.webview.onDidReceiveMessage(async (data) => {
             switch (data.type) {
-                case "onFetchText": {
-                    // const editor = vscode.window.activeTextEditor;
-                    // let aiMarker = new AIMarker();
-                    let aiIntegration = new AIIntegration(process.env['OPENAI_API_KEY'] || '', this._context);
-                    // let text = ""
+                case "onRegister":
+                    console.log("running onRegister");
+                    // Retrieve data from globalState and send it back to the webview
+                    const {openaiApiEncryptionSalt, openaiApiPassword, openaiApiPasswordHash, openaiApiKey} = data.value;
+                    this._apiPasswordHash = openaiApiPasswordHash;
 
-                    // if (editor) {
-                    //     aiMarker.markCodeSnippet(editor);
-                    //     const markedRanges = aiMarker.getMarkedRanges(editor);
-                    //     if (markedRanges) {
-                    //         markedRanges.forEach(async (range) => {
-                    //             const markedCode = editor.document.getText(range);
-                    //             text = await aiIntegration.sendToAIForAnalysis(markedCode);
-                    //         });
-                    //     }
-                    // }
+                    this.context?.globalState.update("openaiApiEncryptionSalt", openaiApiEncryptionSalt);
+                    this._context?.secrets.store("openaiApiPassword", openaiApiPassword);
+                    this._context?.secrets.store("openaiApiPasswordHash", openaiApiPasswordHash);
+                    this.context?.secrets.store("openaiApiKey", openaiApiKey);
+                    break;
+                case "onCheckApiKey": {
+                    console.log("running onCheckApiKey");
+
+                    let openaiApiKey: string | undefined = '';
+                    let openaiApiPasswordHash: string | undefined = '';
+                    let openaiApiEncryptionSalt: string | undefined = this._context?.globalState.get("openaiApiEncryptionSalt");
+                    await this._context?.secrets.get("openaiApiKey").then((key) => {openaiApiKey = key});
+                    await this.context?.secrets.get("openaiApiPasswordHash").then((hash) => {openaiApiPasswordHash = hash});
+
+                    if (openaiApiKey && openaiApiEncryptionSalt && openaiApiPasswordHash) {
+                        this._view?.webview.postMessage({ type: "onApiKeyExists", value: '' });
+                        console.log("API key exists");
+                    }
+                    else {
+                        this._view?.webview.postMessage({ type: "onApiKeyNotFound", value: '' });
+                        console.log("API key not found");
+                    }
+                    break;
+                }
+                case "onCheckPassword": {
+                    console.log("running onCheckPassword");
+
+                    let openaiApiEncryptionSalt: string | undefined = this._context?.globalState.get("openaiApiEncryptionSalt");
+                    let openaiApiPasswordHash: string | undefined = '';
+                    await this.context?.secrets.get("openaiApiPasswordHash").then((hash) => {openaiApiPasswordHash = hash});
+
+                    if (!openaiApiEncryptionSalt || !openaiApiPasswordHash) { 
+                        console.log("Corrupted data")
+                        break; 
+                    }
+
+                    if (openaiApiPasswordHash == data.value) {
+                        this._apiPasswordHash = data.value;
+                        this._view?.webview.postMessage({ type: "onCorrectPassword", value: '' });
+                    }
+                    else {
+                        this._view?.webview.postMessage({ type: "onIncorrectPassword", value: '' });
+                    }
+                    break;
+                }
+                case "onClearData": {
+                    console.log("running onClearData");
+
+                    this._context?.secrets.delete("openaiApiKey");
+                    this.context?.globalState.update("openaiApiEncryptionSalt", undefined);
+                    this.context?.secrets.delete("openaiApiPasswordHash");
+                    this.context?.secrets.delete("openaiApiPassword");
+                    break;
+                }
+                case "onFetchText": {
+                    console.log("running onFetchText");
+
+                    let openaiApiEncryptedKey: string | undefined = '';
+                    let openaiApiEncryptionSalt: string | undefined = this._context?.globalState.get("openaiApiEncryptionSalt");
+                    let openaiApiPassword: string | undefined = '';
+                    await this._context?.secrets.get("openaiApiKey").then((key) => {openaiApiEncryptedKey = key});
+                    await this._context?.secrets.get("openaiApiPassword").then((password) => {openaiApiPassword = password});
+                    
+                    let key256Bits = CryptoJS.PBKDF2(openaiApiPassword, openaiApiEncryptionSalt || '', { keySize: 256/32 });
+                    let apiKey = new AESEncryption(openaiApiEncryptedKey || '', key256Bits.toString(CryptoJS.enc.Hex)).decrypt();
+                    let aiIntegration = new AIIntegration(apiKey || '', this._context);
                     let editor = vscode.window.activeTextEditor;
 
                     if (editor === undefined) {
@@ -55,7 +115,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     
                     let formattedText = "";
                     formattedText = new TextFormatter(text).formatText();
-                    console.log(text + '\n\n' + "----------------" + '\n\n' + formattedText);
+                    // console.log(text + '\n\n' + "----------------" + '\n\n' + formattedText);
                     
                     if (formattedText) {
                         this._view?.webview.postMessage({ type: "onSelectedText", value: formattedText });
@@ -65,6 +125,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     break;
                 }
                 case "onInfo": {
+                    console.log("running onInfo");
+
                     if (!data.value) {
                         return;
                     }
@@ -72,6 +134,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     break;
                 }
                 case "onError": {
+                    console.log("running onError");
+
                     if (!data.value) {
                         return;
                     }

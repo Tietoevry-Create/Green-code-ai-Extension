@@ -31,7 +31,7 @@ export class TextFormatter {
             newOutput = this.rewriteNormalList(output);
         }
     
-        this._output = newOutput.join('\n\n');
+        this._output = newOutput.join('\n\n') + '\n';
     }
     
     private rewriteOrderedList(output: string[]): string[] {
