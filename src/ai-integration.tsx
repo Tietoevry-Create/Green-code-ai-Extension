@@ -26,7 +26,7 @@ export class AIIntegration {
             "https://green-code-advisor.openai.azure.com/",
             new AzureKeyCredential(this._apiKey)
         );
-        const deployment = "deployment-03";
+        const deployment = "deployment-02";
         const temperature = 0.5;
 
         const textSplitter = new RecursiveCharacterTextSplitter({
