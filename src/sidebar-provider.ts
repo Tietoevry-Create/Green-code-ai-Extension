@@ -5,6 +5,8 @@ import { TextFormatter } from './text-formatter';
 import { AESEncryption } from './aes-encryption';
 import { Hashmap } from './hashmap';
 import CryptoJS from 'crypto-js';
+import path from 'path';
+import fs from "fs";
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
     _view?: vscode.WebviewView;

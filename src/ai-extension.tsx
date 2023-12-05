@@ -1,6 +1,6 @@
 // ai-extension.ts
 import * as vscode from 'vscode';
-import { SidebarProvider } from './sidebar-provider';
+import { SidebarProvider } from './sidebar-provider.js';
 
 export function activate(context: vscode.ExtensionContext) {
 
