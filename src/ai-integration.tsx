@@ -1,12 +1,10 @@
-// ai-integration.ts
 import * as vscode from 'vscode';
-import { RetrievalQAChain } from "langchain/chains";
-import { HNSWLib } from "langchain/vectorstores/hnswlib";
-import { TextLoader } from "langchain/document_loaders/fs/text";
-import { OpenAI } from 'langchain/llms/openai';
-import { OpenAIEmbeddings } from 'langchain/embeddings/openai';
-import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
+// import { TextLoader } from "langchain/document_loaders/fs/text";
+import { TextLoader } from './text-loader';
 import { Hashmap } from './hashmap';
+import { VectorStore } from './vector-store';
+import { OpenAIClient, AzureKeyCredential } from "@azure/openai";
+import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 
 const path = require('path');
 
@@ -14,7 +12,6 @@ const path = require('path');
 export class AIIntegration {
     private _apiKey: string;
     private _context?: vscode.ExtensionContext;
-    
 
     constructor(apiKey: string, context: vscode.ExtensionContext | undefined) {
         this._apiKey = apiKey;
@@ -25,29 +22,20 @@ export class AIIntegration {
         
         const contextFilePath = path.join(__dirname, '..', 'context.txt');
 
-        const llm = new OpenAI({
-            temperature: 0.9,
-            azureOpenAIApiKey: this._apiKey,
-            azureOpenAIApiVersion: "2023-07-01-preview",
-            azureOpenAIApiInstanceName: "gpt-35-turbo-instruct",
-            azureOpenAIApiDeploymentName: "deployment-01",
-            azureOpenAIBasePath: "https://green-code-advisor.openai.azure.com/openai/deployments"
-        })
-        
-        const embeddings = new OpenAIEmbeddings({
-            azureOpenAIApiDeploymentName: 'deployment-04',
-            azureOpenAIApiVersion: '2022-12-01',
-            azureOpenAIApiKey: this._apiKey,
-            azureOpenAIBasePath: "https://green-code-advisor.openai.azure.com/openai/deployments"
-        })
-        
+        const client = new OpenAIClient(
+            "https://green-code-advisor.openai.azure.com/",
+            new AzureKeyCredential(this._apiKey)
+        );
+        const deployment = "deployment-02";
+        const temperature = 0.5;
+
         const textSplitter = new RecursiveCharacterTextSplitter({
             chunkSize: 500,
             chunkOverlap: 25,
         })
-        
+
         const rawDocs = await loadData(contextFilePath);
-        const docs = await textSplitter.splitDocuments(rawDocs);        
+        const docs = await textSplitter.splitDocuments(rawDocs);
 
         async function loadData(file:any) {
             const loader = new TextLoader(file);
@@ -55,44 +43,81 @@ export class AIIntegration {
             return rawDocs;
         }
 
-        const vectorStore = await HNSWLib.fromDocuments(docs, embeddings);
-        const startTime = Date.now();
-
-        async function qaDocument(question:any, vectorstores:any): Promise<string> {
-            const retriever = vectorstores.asRetriever({ k: 10 });
-            const chain = RetrievalQAChain.fromLLM(llm, retriever, {
-                returnSourceDocuments: true
-            });
-            const response = await chain.call({
-                query:question,
-            });
-
-            const endTime = Date.now();     
-            const timeTaken = endTime - startTime;
-            console.log(timeTaken/1000 + " seconds.");
-            
-            vscode.window.showInformationMessage(response.text);
-            return response.text;
-        }
-            
         const question = 'How can I make the following code more sustainable and energy-efficient?:' + code + '. Include the most important points as a pointer list. Make the feedback specific to the codesnippet.';
+        const vectorStore = new VectorStore(docs, question, this._apiKey);
+        const relevantContext = vectorStore.generate();
         
+        const messages = [
+            {
+                "role": "system", "content": `Fulfill the following request based on the given context:
+                Make it as a list of pointers. Do not write any text that is not within the pointers.
+                ${relevantContext}
+                `
+            },
+            {
+                "role": "user", "content": question
+            },
+        ];
+        
+        let answer;
+        let questionHash = '';
+
         if (!this._context) {
             console.log("Failed to access context. Your responses will not be saved.")
-            return await qaDocument(question, vectorStore);
+            const response = await client.getChatCompletions(deployment, messages, {temperature});
+
+            if (response && response.choices) {
+                const choices = response.choices;
+                if (choices.length > 0) {
+                    answer = choices[0]?.message?.content;
+                
+                    if (answer) {
+                        return answer;
+                    } else {
+                        console.log('Not a valid answer');
+                        return 'Error retrieving the answer.';
+                    }
+                } else {
+                    console.log('No choices found in the response');
+                    return 'Error retrieving the answer.';
+                }
+            } else {
+                console.log('Invalid response');
+                return 'Invalid response';
+            }
         }
-        
-        let questionHash = new Hashmap(question).stringHash();
+
+        questionHash = new Hashmap(question).stringHash();
         const storedData = this._context?.globalState.get<string>(questionHash.toString());
 
         if (storedData && !regen) {
+            console.log("Fetching saved response...");
             return storedData;
         }
 
-        const result = await qaDocument(question, vectorStore);
-        this._context?.globalState.update(questionHash.toString(), result);
+        console.log("Requesting new response...");
+        const response = await client.getChatCompletions(deployment, messages, {temperature});
+        
+        if (response && response.choices) {
+            const choices = response.choices;
+            if (choices.length > 0) {
+                answer = choices[0]?.message?.content;
+            
+                if (!answer) {
+                    console.log('Not a valid answer');
+                    return 'Error retrieving the answer.';
+                }
+            } else {
+                console.log('No choices found in the response');
+                return 'Error retrieving the answer.';
+            }
+        } else {
+            console.log('Invalid response');
+            return 'Invalid response';
+        } 
 
-        return result;
+        this._context?.globalState.update(questionHash.toString(), answer);
+        return answer;
      }
 }
 
