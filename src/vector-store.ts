@@ -1,24 +1,24 @@
 import { OpenAIEmbeddings } from "langchain/embeddings/openai";
 import { Document } from "langchain/document";
-import { CloseVectorWeb } from 'langchain/vectorstores/closevector/web';
 import { CloseVectorNode } from "langchain/vectorstores/closevector/node";
 
 export class VectorStore {
     private _doc: Document<Record<string, any>>[];
     private _question: string;
     private _apiKey: string;
-    private _k = 7;
-    private _azureOpenAIApiEmbeddingsDeploymentName = "deployment-04";
-    private _azureOpenAIApiDeploymentName = "deployment-02";
-    private _azureOpenAIApiInstanceName = "green-code-advisor";
-    private _azureOpenAIApiVersion = "2023-07-01-preview";
-    private _azureOpenAIBasePath = "https://green-code-advisor.openai.azure.com/openai/deployments";
-    private _modelName = "text-embedding-ada-002";
+    private _azureOpenAIApiEmbeddingsDeploymentName: string;
+    private _azureOpenAIApiVersion: string;
+    private _azureOpenAIBasePath: string;
 
-    constructor(document: Document<Record<string, any>>[], question: string, apiKey: string) {
+    private _k = 7;
+
+    constructor(document: Document<Record<string, any>>[], question: string, embeddingsDepoName: string, apiVersion: string, apiKey: string, baseUrl: string) {
         this._doc = document;
         this._question = question;
+        this._azureOpenAIApiEmbeddingsDeploymentName = embeddingsDepoName;
+        this._azureOpenAIApiVersion = apiVersion;
         this._apiKey = apiKey;
+        this._azureOpenAIBasePath = baseUrl.endsWith('/') ? baseUrl + "openai/deployments" : baseUrl + "/openai/deployments";
     }
 
     public async generate(): Promise<string> {
@@ -26,12 +26,9 @@ export class VectorStore {
         // const vectorStore = await CloseVectorWeb.fromTexts(
         const openaiEmbeddings = new OpenAIEmbeddings({
             azureOpenAIApiEmbeddingsDeploymentName: this._azureOpenAIApiEmbeddingsDeploymentName,
-            azureOpenAIApiDeploymentName: this._azureOpenAIApiDeploymentName,
-            azureOpenAIApiInstanceName: this._azureOpenAIApiInstanceName,
             azureOpenAIApiKey: this._apiKey,
             azureOpenAIApiVersion: this._azureOpenAIApiVersion,
-            azureOpenAIBasePath: this._azureOpenAIBasePath,
-            modelName: this._modelName
+            azureOpenAIBasePath: this._azureOpenAIBasePath
         });
     
         const vectorStore = await CloseVectorNode.fromDocuments(

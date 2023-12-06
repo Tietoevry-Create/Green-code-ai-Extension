@@ -54,7 +54,7 @@ export class TextFormatter {
                 }
             } else if (newline == '' || newline == '\n') {
                 return;
-            } else if (listOngoing) {
+            } else if (listOngoing && !this.isUnorderedList(newline)) {
                 listOngoing = false;
                 newline = "</ol>" + newline;
             }

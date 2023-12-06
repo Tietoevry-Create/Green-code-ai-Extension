@@ -36,13 +36,18 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 case "onRegister":
                     console.log("running onRegister");
                     // Retrieve data from globalState and send it back to the webview
-                    const {openaiApiEncryptionSalt, openaiApiPassword, openaiApiPasswordHash, openaiApiKey} = data.value;
+                    const {azureOpenaiEmbeddingsDeploymentName, openaiApiVersion, azureOpenaiCompletionsDeploymentName, azureOpenaiBaseUrl,
+                         openaiApiEncryptionSalt, openaiApiPassword, openaiApiPasswordHash, openaiApiKey} = data.value;
                     this._apiPasswordHash = openaiApiPasswordHash;
 
-                    this.context?.globalState.update("openaiApiEncryptionSalt", openaiApiEncryptionSalt);
+                    this._context?.globalState.update("azureOpenaiEmbeddingsDeploymentName", azureOpenaiEmbeddingsDeploymentName);
+                    this._context?.globalState.update("openaiApiVersion", openaiApiVersion);
+                    this._context?.globalState.update("azureOpenaiCompletionsDeploymentName", azureOpenaiCompletionsDeploymentName);
+                    this._context?.globalState.update("azureOpenaiBaseUrl", azureOpenaiBaseUrl);
+                    this._context?.globalState.update("openaiApiEncryptionSalt", openaiApiEncryptionSalt);
                     this._context?.secrets.store("openaiApiPassword", openaiApiPassword);
                     this._context?.secrets.store("openaiApiPasswordHash", openaiApiPasswordHash);
-                    this.context?.secrets.store("openaiApiKey", openaiApiKey);
+                    this._context?.secrets.store("openaiApiKey", openaiApiKey);
                     break;
                 case "onCheckApiKey": {
                     console.log("running onCheckApiKey");
@@ -87,6 +92,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 case "onClearData": {
                     console.log("running onClearData");
 
+                    this._context?.globalState.update("azureOpenaiEmbeddingsDeploymentName", undefined);
+                    this._context?.globalState.update("openaiApiVersion", undefined);
+                    this._context?.globalState.update("azureOpenaiCompletionsDeploymentName", undefined);
+                    this.context?.globalState.update("azureOpenaiBaseUrl", undefined);
                     this._context?.secrets.delete("openaiApiKey");
                     this.context?.globalState.update("openaiApiEncryptionSalt", undefined);
                     this.context?.secrets.delete("openaiApiPasswordHash");
@@ -96,15 +105,20 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 case "onFetchText": {
                     console.log("running onFetchText");
 
-                    let openaiApiEncryptedKey: string | undefined = '';
+                    let azureOpenaiEmbeddingsDeploymentName: string | undefined = this.context?.globalState.get("azureOpenaiEmbeddingsDeploymentName");
+                    let openaiApiVersion: string | undefined = this.context?.globalState.get("openaiApiVersion");
+                    let azureOpenaiCompletionsDeploymentName: string | undefined = this.context?.globalState.get("azureOpenaiCompletionsDeploymentName");
+                    let azureOpenaiBaseUrl: string | undefined = this.context?.globalState.get("azureOpenaiBaseUrl");
                     let openaiApiEncryptionSalt: string | undefined = this._context?.globalState.get("openaiApiEncryptionSalt");
+                    let openaiApiEncryptedKey: string | undefined = '';
                     let openaiApiPassword: string | undefined = '';
                     await this._context?.secrets.get("openaiApiKey").then((key) => {openaiApiEncryptedKey = key});
                     await this._context?.secrets.get("openaiApiPassword").then((password) => {openaiApiPassword = password});
                     
                     let key256Bits = CryptoJS.PBKDF2(openaiApiPassword, openaiApiEncryptionSalt || '', { keySize: 256/32 });
                     let apiKey = new AESEncryption(openaiApiEncryptedKey || '', key256Bits.toString(CryptoJS.enc.Hex)).decrypt();
-                    let aiIntegration = new AIIntegration(apiKey || '', this._context);
+                    let aiIntegration = new AIIntegration(azureOpenaiEmbeddingsDeploymentName || '', openaiApiVersion || '', 
+                    azureOpenaiCompletionsDeploymentName || '', azureOpenaiBaseUrl || '', apiKey || '', this._context);
                     let editor = vscode.window.activeTextEditor;
 
                     if (editor === undefined) {
@@ -115,8 +129,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     let text = "";
                     await aiIntegration.sendToAIForAnalysis(editor.document.getText(editor.selection), data.value).then((value) => {text = value});
                     
-                    let formattedText = "";
-                    formattedText = new TextFormatter(text).formatText();
+                    let formattedText = new TextFormatter(text).formatText();
                     // console.log(text + '\n\n' + "----------------" + '\n\n' + formattedText);
                     
                     if (formattedText) {
