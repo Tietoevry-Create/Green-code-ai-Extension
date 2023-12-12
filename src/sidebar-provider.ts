@@ -3,10 +3,7 @@ import { Utils } from 'vscode-uri';
 import { AIIntegration } from './ai-integration';
 import { TextFormatter } from './text-formatter';
 import { AESEncryption } from './aes-encryption';
-import { Hashmap } from './hashmap';
 import CryptoJS from 'crypto-js';
-import path from 'path';
-import fs from "fs";
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
     _view?: vscode.WebviewView;
@@ -87,6 +84,22 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     else {
                         this._view?.webview.postMessage({ type: "onIncorrectPassword", value: '' });
                     }
+                    break;
+                }
+                case "onFetchSavedData": {
+                    console.log("running onFetchSavedData");
+
+                    let openaiApiPassword: string | undefined = '';
+                    await this.context?.secrets.get("openaiApiPassword").then((password) => {openaiApiPassword = password});
+                    this._view?.webview.postMessage({ type: "onDataFetched", value: 
+                        [
+                            this._context?.globalState.get("azureOpenaiEmbeddingsDeploymentName") || '',
+                            this._context?.globalState.get("openaiApiVersion") || '',
+                            this._context?.globalState.get("azureOpenaiCompletionsDeploymentName") || '',
+                            this.context?.globalState.get("azureOpenaiBaseUrl") || '',
+                            openaiApiPassword
+                        ]
+                    });
                     break;
                 }
                 case "onClearData": {

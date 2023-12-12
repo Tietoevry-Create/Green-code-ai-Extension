@@ -60,16 +60,34 @@ export class AIIntegration {
             return rawDocs;
         }
 
-        const question = 'How can I make the following code more sustainable and energy-efficient?:\n' + code + 
-        '\nInclude the most important points as a pointer list. Make the feedback specific to the code snippet. Keep general feedback to a minimum.';
+        let question = '';
+        if (code.length < 50) {
+            return "Please provide a larger code snippet.";
+        }
+        else if (code.length > 5000) {
+            return "Code snippet is too large. Please provide a smaller snippet.";
+        }
+
+        let pointerNumber = 5;
+        if (code.length > 3000) {
+            pointerNumber = 10;
+        }
+        else if (code.length < 500) {
+            pointerNumber = 3;
+        }
+
+        question = 'How can I make the following code more sustainable and energy-efficient?:\n' + code;
         const vectorStore = new VectorStore(docs, question, this._embeddingsDepoName, this._apiVersion, this._apiKey, this._baseUrl);
-        const relevantContext = vectorStore.generate();
+        
+        const relevantContext = await vectorStore.generate();
         
         const content = `Fulfill requests based on the given context. Write your answer as a list of pointers. 
-        Do not write any text that is not part of a pointer.
+        Do not write any text that is not part of a pointer. Include the most important points as a pointer list. Make the feedback specific to the code snippet. 
+        Keep general feedback to a minimum. Keep the number of pointers to ${pointerNumber} or less.
         
         ${relevantContext}
         `;
+        console.log(content);
         const messages = [
             {
                 "role": "system", "content": content
