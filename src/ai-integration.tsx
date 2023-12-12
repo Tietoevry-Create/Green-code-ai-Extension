@@ -7,8 +7,6 @@ import * as fs from 'fs';
 
 
 export class AIIntegration {
-    private _embeddingsDepoName: string;
-    private _apiVersion: string;
     private _completionsDepoName: string;
     private _baseUrl: string;
     private _apiKey: string;
@@ -20,15 +18,13 @@ export class AIIntegration {
         this._baseUrl = baseUrl;
         this._apiKey = apiKey;
         this._context = context;
-        this._embeddingsDepoName = embeddingsDepoName;
-        this._apiVersion = apiVersion;
         this._completionsDepoName = completionsDepoName;
     }
 
     public async sendToAIForAnalysis(code: string, regen:boolean): Promise<string> {
         
         const contextFilePath = path.join(__dirname, '..', this._contextFileName);
-        const temperature = 0.1;
+        const temperature = 0.5;
 
         let azureClient = undefined;
         let client = undefined;
@@ -124,6 +120,8 @@ export class AIIntegration {
             }
         }
 
+        const start = Date.now();
+
         questionHash = new Hashmap(question).stringHash();
         const storedData = this._context?.globalState.get<string>(questionHash.toString());
 
@@ -150,6 +148,8 @@ export class AIIntegration {
                 model: "gpt-3.5-turbo"
             })
         }
+        let end = Date.now();
+        console.log(`${(end - start) / 1000} seconds`);
         
         if (response && response.choices) {
             const choices = response.choices;

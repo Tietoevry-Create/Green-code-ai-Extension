@@ -33,12 +33,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 case "onRegister":
                     console.log("running onRegister");
                     // Retrieve data from globalState and send it back to the webview
-                    const {azureOpenaiEmbeddingsDeploymentName, openaiApiVersion, azureOpenaiCompletionsDeploymentName, azureOpenaiBaseUrl,
-                         openaiApiEncryptionSalt, openaiApiPassword, openaiApiPasswordHash, openaiApiKey} = data.value;
+                    const {azureOpenaiCompletionsDeploymentName, azureOpenaiBaseUrl, openaiApiEncryptionSalt, openaiApiPassword, openaiApiPasswordHash,
+                        openaiApiKey} = data.value;
+                    
                     this._apiPasswordHash = openaiApiPasswordHash;
 
-                    this._context?.globalState.update("azureOpenaiEmbeddingsDeploymentName", azureOpenaiEmbeddingsDeploymentName);
-                    this._context?.globalState.update("openaiApiVersion", openaiApiVersion);
                     this._context?.globalState.update("azureOpenaiCompletionsDeploymentName", azureOpenaiCompletionsDeploymentName);
                     this._context?.globalState.update("azureOpenaiBaseUrl", azureOpenaiBaseUrl);
                     this._context?.globalState.update("openaiApiEncryptionSalt", openaiApiEncryptionSalt);
@@ -46,17 +45,37 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     this._context?.secrets.store("openaiApiPasswordHash", openaiApiPasswordHash);
                     this._context?.secrets.store("openaiApiKey", openaiApiKey);
                     break;
+                case "onEdit": {
+                    const {azureOpenaiCompletionsDeploymentName, azureOpenaiBaseUrl, unencryptedApiKey} = data.value;
+
+                    if (unencryptedApiKey) {
+                        let openaiApiPassword: string | undefined = '';
+                        let openaiApiEncryptionSalt: string | undefined = this._context?.globalState.get("openaiApiEncryptionSalt");
+                        await this._context?.secrets.get("openaiApiPassword").then((password) => {openaiApiPassword = password});
+                        var key256Bits = CryptoJS.PBKDF2(openaiApiPassword, openaiApiEncryptionSalt!, { keySize: 256/32 }).toString();
+                        const openaiApiKey = new AESEncryption(unencryptedApiKey, key256Bits).encrypt();
+                        this._context?.secrets.store("openaiApiKey", openaiApiKey);
+                    }
+
+                    if (azureOpenaiCompletionsDeploymentName)
+                        this._context?.globalState.update("azureOpenaiCompletionsDeploymentName", azureOpenaiCompletionsDeploymentName);
+                    if (azureOpenaiBaseUrl)
+                        this._context?.globalState.update("azureOpenaiBaseUrl", azureOpenaiBaseUrl);
+                    break;
+                }
                 case "onCheckApiKey": {
                     console.log("running onCheckApiKey");
 
                     let openaiApiKey: string | undefined = '';
+                    let openaiApiPassword: string | undefined = '';
                     let openaiApiPasswordHash: string | undefined = '';
                     let openaiApiEncryptionSalt: string | undefined = this._context?.globalState.get("openaiApiEncryptionSalt");
                     await this._context?.secrets.get("openaiApiKey").then((key) => {openaiApiKey = key});
+                    await this._context?.secrets.get("openaiApiPassword").then((password) => {openaiApiPassword = password});
                     await this.context?.secrets.get("openaiApiPasswordHash").then((hash) => {openaiApiPasswordHash = hash});
 
                     if (openaiApiKey && openaiApiEncryptionSalt && openaiApiPasswordHash) {
-                        this._view?.webview.postMessage({ type: "onApiKeyExists", value: '' });
+                        this._view?.webview.postMessage({ type: "onApiKeyExists", value: openaiApiPassword ? true : false });
                         console.log("API key exists");
                     }
                     else {
@@ -93,8 +112,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     await this.context?.secrets.get("openaiApiPassword").then((password) => {openaiApiPassword = password});
                     this._view?.webview.postMessage({ type: "onDataFetched", value: 
                         [
-                            this._context?.globalState.get("azureOpenaiEmbeddingsDeploymentName") || '',
-                            this._context?.globalState.get("openaiApiVersion") || '',
                             this._context?.globalState.get("azureOpenaiCompletionsDeploymentName") || '',
                             this.context?.globalState.get("azureOpenaiBaseUrl") || '',
                             openaiApiPassword
@@ -105,8 +122,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 case "onClearData": {
                     console.log("running onClearData");
 
-                    this._context?.globalState.update("azureOpenaiEmbeddingsDeploymentName", undefined);
-                    this._context?.globalState.update("openaiApiVersion", undefined);
                     this._context?.globalState.update("azureOpenaiCompletionsDeploymentName", undefined);
                     this.context?.globalState.update("azureOpenaiBaseUrl", undefined);
                     this._context?.secrets.delete("openaiApiKey");
@@ -140,7 +155,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     }
 
                     let text = "";
-                    await aiIntegration.sendToAIForAnalysis(editor.document.getText(editor.selection), data.value).then((value) => {text = value});
+                    try {
+                        await aiIntegration.sendToAIForAnalysis(editor.document.getText(editor.selection), data.value).then((value) => {text = value});
+                    } catch(error) {
+                        console.log(error);
+                        this._view?.webview.postMessage({ type: "onError", value: error });
+                        break;
+                    }
                     
                     let formattedText = new TextFormatter(text).formatText();
                     // console.log(text + '\n\n' + "----------------" + '\n\n' + formattedText);

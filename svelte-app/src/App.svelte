@@ -5,9 +5,9 @@
     import { Hashmap } from '../../out/hashmap';
     import { AESEncryption } from '../../out/aes-encryption';
     import CryptoJS from 'crypto-js';
-  import { isatty } from "tty";
     
-    let text = "Highlight a piece of code and press `Get Feedback`!";
+    const placeholder = "Highlight a piece of code and press `Get Feedback`!";
+    let text = placeholder;
     let textColor = "gray";
     let maxDivHeight = window.innerHeight - 150;
     let regenResponse = false;
@@ -18,9 +18,7 @@
     let showApiKeyPopup = false;
     let showApiPasswordPopup = false;
     let passwordRequired = false;
-    let value = '';
-    let embeddingsDeployment = "";
-    let apiVersion = "";
+    let editMode = false;
     let completionsDeployment = "";
     let baseUrl = "";
     let apiKey = "";
@@ -39,6 +37,16 @@
                 }
             }
         });
+        window.addEventListener("message", (event) => {
+            const message = event.data;
+            switch (message.type) {
+                case "onError": {
+                    errorMessage = message.value.message || message.value.code;
+                    showError = true;
+                    text = placeholder;
+                }
+            }
+        })
         window.addEventListener("resize", updateMaxDivHeight);
         checkApiKey();
     });
@@ -49,8 +57,10 @@
 
     function clearSavedData() {
         tsvscode.postMessage({ type: "onClearData", value: '' });
+        [completionsDeployment, baseUrl, apiKey, password] = ['', '', '', ''];
         showApiKeyPopup = true;
         showApiPasswordPopup = false;
+        editMode = false;
     }
 
     function fetchText() {
@@ -60,15 +70,15 @@
     }
 
     function anyEmptyFields() {
-        return embeddingsDeployment == '' || apiVersion == '' || completionsDeployment == '' || baseUrl == '';
+        return completionsDeployment == '' || baseUrl == '';
     }
 
     function saveApiKey() {
         try {
-            if ((isAzure && (!baseUrl || !embeddingsDeployment || !apiVersion || !completionsDeployment)) || !apiKey) {
-            errorMessage = `Fill in all fields!`;
-            showError = true;
-            return;
+            if ((isAzure && (!baseUrl || !completionsDeployment)) || !apiKey) {
+                errorMessage = `Fill in all fields!`;
+                showError = true;
+                return;
             }
 
             passwordRequired = password ? true : false;
@@ -79,23 +89,43 @@
             var encryptedKey = new AESEncryption(apiKey, key256Bits).encrypt();
 
             tsvscode.postMessage({ type: "onRegister", value: {
-            azureOpenaiEmbeddingsDeploymentName: embeddingsDeployment,
-            openaiApiVersion: apiVersion,
-            azureOpenaiCompletionsDeploymentName: completionsDeployment,
-            azureOpenaiBaseUrl: baseUrl,
-            openaiApiEncryptionSalt: salt,
-            openaiApiPassword: password,
-            openaiApiPasswordHash: passwordHash,
-            openaiApiKey: encryptedKey
+                azureOpenaiCompletionsDeploymentName: completionsDeployment,
+                azureOpenaiBaseUrl: baseUrl,
+                openaiApiEncryptionSalt: salt,
+                openaiApiPassword: password,
+                openaiApiPasswordHash: passwordHash,
+                openaiApiKey: encryptedKey
             } });
             
-            errorMessage = 'API Key saved!';
-            showError = true;
             [showApiKeyPopup, showApiPasswordPopup] = [false, false];
         } catch (error) {
             errorMessage = `Error saving API key: ${error}`;
             showError = true;
         }
+    }
+
+    function editValues() {
+        let unencryptedKey = '';
+        
+        if (passwordRequired) {
+            if (password == '') {
+                errorMessage = "Enter Password to Save Changes";
+                showError = true;
+                return;
+            }
+            if (!checkApiPassword()) {
+                errorMessage = "Wrong Password!";
+                showError = true;
+                return;
+            }
+        }
+
+        tsvscode.postMessage({ type: "onEdit", value: {
+            azureOpenaiCompletionsDeploymentName: completionsDeployment,
+            azureOpenaiBaseUrl: baseUrl,
+            openaiApiKey: unencryptedKey
+        } });
+        showApiKeyPopup = false;
     }
 
     function updateMaxDivHeight() {
@@ -108,7 +138,10 @@
             const message = event.data;
             switch (message.type) {
                 case "onApiKeyExists": {
-                    showApiPasswordPopup = true;
+                    passwordRequired = message.value;
+                    if (passwordRequired) {
+                        showApiPasswordPopup = true;
+                    }
                     break;
                 }
                 case "onApiKeyNotFound": {
@@ -128,21 +161,18 @@
     }
 
     function toggleApiKeyPopup() {
+        editMode = true;
+
         try {
-            errorMessage = `showApiKeyPopup: ${showApiKeyPopup}
-            showApiPasswordPopup: ${showApiPasswordPopup}`;
-            showError = true;
             if (!showApiKeyPopup && anyEmptyFields()) {
                 tsvscode.postMessage({type: "onFetchSavedData", value: ''});
-                errorMessage = "Fetching Saved data...";
-                showError = true;
 
                 window.addEventListener("message", (event) => {
                     const message = event.data;
                     switch (message.type) {
                         case "onDataFetched": {
-                            [embeddingsDeployment, apiVersion, completionsDeployment, baseUrl, password] = message.value;
-                            if (embeddingsDeployment || apiVersion || completionsDeployment || baseUrl) {
+                            [completionsDeployment, baseUrl, password] = message.value;
+                            if (completionsDeployment || baseUrl) {
                                 isAzure = true;
                             }
                             passwordRequired = password ? true : false;
@@ -153,7 +183,7 @@
                 });
                 showApiKeyPopup = true;
             } else {
-                showApiKeyPopup = !showApiKeyPopup;
+                [showApiKeyPopup, showApiPasswordPopup] = [!showApiKeyPopup, false];
             }
         } catch (error) {
             errorMessage = `${error}`;
@@ -163,8 +193,6 @@
 
     function isAzureChanged() {
         if (!isAzure) {
-            embeddingsDeployment = '';
-            apiVersion = '';
             completionsDeployment = '';
             baseUrl = '';
             apiKey = '';
@@ -180,17 +208,15 @@
             const message = event.data;
             switch (message.type) {
             case "onCorrectPassword":
-                errorMessage = 'Logging in!';
-                showError = true;
-                showApiKeyPopup = false;
-                showApiPasswordPopup = false;
-                break;
+                [showApiKeyPopup, showApiPasswordPopup] = [false, false];
+                return true;
             case "onIncorrectPassword":
                 errorMessage = 'Incorrect Password';
                 showError = true;
-                break;
+                return false;
             }
         });
+        return false;
     }
 
     function clearError() {
@@ -517,22 +543,20 @@
 
     {#if showApiKeyPopup}
         <div class="popup">
-            <select bind:value={isAzure} on:change={() => isAzureChanged()}>
-                <option value={true}>Azure OpenAI</option>
-                <option value={false}>OpenAI</option>
-            </select>
+            <!-- svelte-ignore a11y-click-events-have-key-events -->
+            <span class="close-button" on:click={toggleApiKeyPopup}>X</span>
+            {#if !editMode}
+                <select bind:value={isAzure} on:change={() => isAzureChanged()}>
+                    <option value={true}>Azure OpenAI</option>
+                    <option value={false}>OpenAI</option>
+                </select>
+            {/if}
             {#if isAzure}
-                <h2>Enter your Embeddings API information</h2>
-                <div class="input-container">
-                    <input type="text" bind:value={value} on:change={() => embeddingsDeployment} placeholder="Deployment Name" />
-                    <div class="help-tip">
-                    <p>Helpful tooltip content</p>
-                    </div>
-                </div>
-                <input type="text" bind:value={apiVersion} placeholder="API Version" />
-                
                 <h2>Enter your Completions API information</h2>
                 <input type="text" bind:value={completionsDeployment} placeholder="Deployment Name" />
+                <div class="help-tip">
+                    <p>Helpful tooltip content</p>
+                </div>
 
                 <h2>Enter your Azure base URL, Azure OpenAI API Key and a password</h2>
                 <input type="text" bind:value={baseUrl} placeholder="Base URL" />
@@ -541,14 +565,16 @@
                 <h2>Enter your OpenAI API Key and a password</h2>
             {/if}
             <input type="password" bind:value={apiKey} placeholder="API Key" />
-            <input type="password" bind:value={password} placeholder="Password (optional)"/>
-            <button on:click={saveApiKey}>Save</button>
+            <input type="password" bind:value={password} placeholder={editMode ? "Confirm Password" : "Password (optional)"}/>
+            <button on:click={editMode ? editValues : saveApiKey}>Save</button>
             <button on:click={clearSavedData}>Clear Saved Data</button>
         </div>
     {/if}
 
     {#if showApiPasswordPopup && passwordRequired}
         <div class="popup">
+            <!-- svelte-ignore a11y-click-events-have-key-events -->
+            <span class="close-button" on:click={() => showApiPasswordPopup = false}>X</span>
             <h2>Enter your password</h2>
             <input type="password" bind:value={password} placeholder="Password"/>
             <button class = "button-container" on:click={checkApiPassword}>Proceed</button>
