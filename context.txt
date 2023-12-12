@@ -1,10 +1,8 @@
 Energy Metrics: Highlight CPU, memory, and I/O metrics.
 Review Guidelines: Emphasize sustainability practices.
-Power-Consuming Parts: Encourage pinpointing such code segments.
+Power-Consuming Parts: Pinpoint such code segments.
 Feedback: Provide feedback on optimizing power-consuming parts.
-Documentation: Stress the importance of well-documented, modular code.
-Follow-up: Schedule a follow-up to discuss actions.
-Metrics Reporting: Regularly report on energy consumption.
+Documentation and Testing: Stress the importance of well-documented, modular code, TDD.
 Efficient Algorithms: Suggest hash tables for constant time complexity.
 Memoization: Optimize Fibonacci with memoization.
 List Comprehension: Use for reduced energy consumption.
@@ -13,41 +11,27 @@ Sleep Statements: Mention for reduced power consumption.
 Best Practices: Summarize avoiding unnecessary operations, optimizing algorithms.
 Infrastructure: Emphasize language choice, virtualization.
 Efficiency Measures: Highlight releasing resources, reducing data transfers.
-Documentation and Testing: Stress concise documentation, TDD.
 CI/CD Pipelines: Summarize the need for automation.
-Infrastructure Review: Briefly discuss sustainability in reviews.
-Measure Footprint Analyst: Outline steps for monitoring and reducing environmental impact.
 Assumptions: Provide a brief overview without specific tools or examples.
-Energy Monitoring: Use tools for servers, data centers, and cloud services.
 Carbon Emissions: Calculate associated carbon emissions.
-Anomaly Monitoring: Set up monitoring for resource usage anomalies.
-Resource Metrics: Monitor CPU, memory, and network for optimization.
 GHG Assessment: Determine emissions for the entire ecosystem.
-Impact Dashboard: Create a real-time environmental impact dashboard.
 Trade-offs: Analyze trade-offs between performance and impact.
 Automated Pipelines: Ensure automated deployment and IaC.
 Scalability: Emphasize scalable infrastructure design.
 Optimizing Existing: Review and optimize existing resources.
 Containerization: Consider Docker for improved utilization.
 Cost Analysis: Evaluate infrastructure costs for efficiency.
-Renewable Sourcing: Investigate renewable energy for data centers.
-Regular Reviews: Establish reviews for sustainability practices.
 Static Analysis Advocate: Concisely present instructions for sustainable code analysis.
-Static Analysis: Use tools for quality improvements.
+Static Analysis: Suggest tools for quality improvements.
 Security Scanning: Employ static analysis for vulnerabilities.
 Code Complexity: Assess code complexity with tools.
 Dependency Analysis: Identify outdated or vulnerable libraries.
 Performance Detection: Use static analysis for bottlenecks.
 Custom Rules: Create tailored rule sets.
 Automation: Integrate static analysis into pipelines.
-Ongoing Assessments: Continuously assess environmental impact.
-Energy Monitoring: Continuously monitor energy efficiency.
-Security Scanning: Regularly scan for vulnerabilities.
-Capacity Assessment: Continuously assess system capacity.
+Ongoing Assessments: Assess environmental impact.
+Security Scanning: Check for vulnerabilities.
 Log Analysis: Analyze logs for waste patterns.
-Incident Analysis: Conduct analysis of sustainability-related incidents.
 Compliance: Ensure compliance with environmental regulations.
-Cost Optimization: Continuously review and optimize costs.
+Cost Optimization: Review and optimize costs.
 User Feedback: Analyze feedback on sustainability issues.
-Action Items: Define specific action items based on monitoring.
-Reporting: Regularly report on sustainability improvements.

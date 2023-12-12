@@ -130,7 +130,7 @@
     function toggleApiKeyPopup() {
         try {
             errorMessage = `showApiKeyPopup: ${showApiKeyPopup}
-            anyEmptyFields: ${anyEmptyFields()}`;
+            showApiPasswordPopup: ${showApiPasswordPopup}`;
             showError = true;
             if (!showApiKeyPopup && anyEmptyFields()) {
                 tsvscode.postMessage({type: "onFetchSavedData", value: ''});
@@ -483,7 +483,7 @@
 {/if}
 
 <div>
-    <div >
+    <div class={showApiKeyPopup || showApiPasswordPopup ? "disabled-container":"container"}>
         <h1>Green Coding</h1>
         <div class="editable-div-container">
             <label for="text"><b>Code Review</b></label>

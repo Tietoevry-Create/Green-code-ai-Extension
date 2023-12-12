@@ -1,12 +1,9 @@
 import * as vscode from 'vscode';
-// import { TextLoader } from "langchain/document_loaders/fs/text";
-import { TextLoader } from './text-loader';
 import { Hashmap } from './hashmap';
-import { VectorStore } from './vector-store';
 import { OpenAIClient, AzureKeyCredential } from "@azure/openai";
-import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import OpenAI from "openai";
 import path from 'path';
+import * as fs from 'fs';
 
 
 export class AIIntegration {
@@ -16,6 +13,7 @@ export class AIIntegration {
     private _baseUrl: string;
     private _apiKey: string;
     private _context?: vscode.ExtensionContext;
+    private _contextFileName = 'context.txt';
 
     constructor(embeddingsDepoName: string, apiVersion: string, completionsDepoName: string, baseUrl: string, apiKey: string,
          context: vscode.ExtensionContext | undefined) {
@@ -29,7 +27,8 @@ export class AIIntegration {
 
     public async sendToAIForAnalysis(code: string, regen:boolean): Promise<string> {
         
-        const contextFilePath = path.join(__dirname, '..', 'context.txt');
+        const contextFilePath = path.join(__dirname, '..', this._contextFileName);
+        const temperature = 0.1;
 
         let azureClient = undefined;
         let client = undefined;
@@ -44,21 +43,8 @@ export class AIIntegration {
         else {
             client = new OpenAI({apiKey: this._apiKey});
         }
-        const temperature = 0.5;
 
-        const textSplitter = new RecursiveCharacterTextSplitter({
-            chunkSize: 500,
-            chunkOverlap: 25,
-        })
-
-        const rawDocs = await loadData(contextFilePath);
-        const docs = await textSplitter.splitDocuments(rawDocs);
-
-        async function loadData(file:any) {
-            const loader = new TextLoader(file);
-            const rawDocs = await loader.load();
-            return rawDocs;
-        }
+        const rawDocs = fs.readFileSync(contextFilePath);
 
         let question = '';
         if (code.length < 50) {
@@ -77,15 +63,12 @@ export class AIIntegration {
         }
 
         question = 'How can I make the following code more sustainable and energy-efficient?:\n' + code;
-        const vectorStore = new VectorStore(docs, question, this._embeddingsDepoName, this._apiVersion, this._apiKey, this._baseUrl);
-        
-        const relevantContext = await vectorStore.generate();
         
         const content = `Fulfill requests based on the given context. Write your answer as a list of pointers. 
         Do not write any text that is not part of a pointer. Include the most important points as a pointer list. Make the feedback specific to the code snippet. 
         Keep general feedback to a minimum. Keep the number of pointers to ${pointerNumber} or less.
         
-        ${relevantContext}
+        ${rawDocs}
         `;
         console.log(content);
         const messages = [
