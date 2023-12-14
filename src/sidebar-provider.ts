@@ -34,7 +34,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     console.log("running onRegister");
                     // Retrieve data from globalState and send it back to the webview
                     const {azureOpenaiCompletionsDeploymentName, azureOpenaiBaseUrl, openaiApiEncryptionSalt, openaiApiPassword, openaiApiPasswordHash,
-                        openaiApiKey} = data.value;
+                        openaiApiKey, openaiApiPasswordCreatedDate} = data.value;
                     
                     this._apiPasswordHash = openaiApiPasswordHash;
 
@@ -44,6 +44,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     this._context?.secrets.store("openaiApiPassword", openaiApiPassword);
                     this._context?.secrets.store("openaiApiPasswordHash", openaiApiPasswordHash);
                     this._context?.secrets.store("openaiApiKey", openaiApiKey);
+                    if (openaiApiPasswordCreatedDate != 0) {
+                        this._context?.globalState.update("openaiApiPasswordCreatedDate", openaiApiPasswordCreatedDate);
+                    } else {
+                        this._context?.globalState.update("openaiApiPasswordCreatedDate", undefined);
+                    }
                     break;
                 case "onEdit": {
                     const {azureOpenaiCompletionsDeploymentName, azureOpenaiBaseUrl, unencryptedApiKey} = data.value;
@@ -70,12 +75,23 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     let openaiApiPassword: string | undefined = '';
                     let openaiApiPasswordHash: string | undefined = '';
                     let openaiApiEncryptionSalt: string | undefined = this._context?.globalState.get("openaiApiEncryptionSalt");
+                    let openaiApiPasswordCreatedDate: number | undefined = this._context?.globalState.get("openaiApiPasswordCreatedDate");
                     await this._context?.secrets.get("openaiApiKey").then((key) => {openaiApiKey = key});
                     await this._context?.secrets.get("openaiApiPassword").then((password) => {openaiApiPassword = password});
                     await this.context?.secrets.get("openaiApiPasswordHash").then((hash) => {openaiApiPasswordHash = hash});
 
+                    let daysSinceCreated : number;
+                    if (openaiApiPasswordCreatedDate) {
+                        let currentDate = Date.now();
+                        daysSinceCreated = (currentDate - openaiApiPasswordCreatedDate!)/86400000;
+                    } else {
+                        daysSinceCreated = 0;
+                    }
+
+                    console.log(daysSinceCreated);
+
                     if (openaiApiKey && openaiApiEncryptionSalt && openaiApiPasswordHash) {
-                        this._view?.webview.postMessage({ type: "onApiKeyExists", value: openaiApiPassword ? true : false });
+                        this._view?.webview.postMessage({ type: "onApiKeyExists", value: [openaiApiPassword ? true : false, daysSinceCreated]});
                         console.log("API key exists");
                     }
                     else {
@@ -128,6 +144,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     this.context?.globalState.update("openaiApiEncryptionSalt", undefined);
                     this.context?.secrets.delete("openaiApiPasswordHash");
                     this.context?.secrets.delete("openaiApiPassword");
+                    this._context?.globalState.update("openaiApiPasswordCreatedDate", undefined);
                     break;
                 }
                 case "onFetchText": {

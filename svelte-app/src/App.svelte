@@ -1,29 +1,34 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte";
-    import { fly } from "svelte/transition";
+    import { fade, fly } from "svelte/transition";
     import { quintOut } from 'svelte/easing';
     import { Hashmap } from '../../out/hashmap';
     import { AESEncryption } from '../../out/aes-encryption';
     import CryptoJS from 'crypto-js';
+    import DiAptana from 'svelte-icons/di/DiAptana.svelte';
+    import FaRedoAlt from 'svelte-icons/fa/FaRedoAlt.svelte';
+    import FaRegWindowClose from 'svelte-icons/fa/FaRegWindowClose.svelte'
     
     const placeholder = "Highlight a piece of code and press `Get Feedback`!";
     let text = placeholder;
     let textColor = "gray";
-    let maxDivHeight = window.innerHeight - 150;
-    let regenResponse = false;
+    let maxDivHeight = window.innerHeight - 170;
+    let regenResponseVal = false;
     let errorMessage = '';
     let showError = false;
     let isAzure = false;
     let settingsPanelVisible = false;
+    let regenPanelVisible = false;
+    let [tooltip1visible, tooltip2visible, tooltip3visible, tooltip4visible] = [false, false, false, false];
     let showApiKeyPopup = false;
     let showApiPasswordPopup = false;
     let passwordRequired = false;
     let editMode = false;
+    let longtermStorage = false;
     let completionsDeployment = "";
     let baseUrl = "";
     let apiKey = "";
     let password = "";
-    
 
     onMount(() => {
     // Listen for messages from the extension
@@ -55,16 +60,21 @@
         window.removeEventListener("resize", updateMaxDivHeight);
     });
 
+    function updateMaxDivHeight() {
+        maxDivHeight = window.innerHeight - 170;
+    }
+
     function clearSavedData() {
         tsvscode.postMessage({ type: "onClearData", value: '' });
         [completionsDeployment, baseUrl, apiKey, password] = ['', '', '', ''];
         showApiKeyPopup = true;
         showApiPasswordPopup = false;
         editMode = false;
+        passwordRequired = false;
     }
 
     function fetchText() {
-        tsvscode.postMessage({ type: "onFetchText", value: regenResponse });
+        tsvscode.postMessage({ type: "onFetchText", value: regenResponseVal });
         text = "Loading...";
         textColor = "gray";
     }
@@ -82,6 +92,7 @@
             }
 
             passwordRequired = password ? true : false;
+            let passwordCreatedDate = longtermStorage ? Date.now() : 0;
 
             var salt = CryptoJS.lib.WordArray.random(128/8);
             var passwordHash = new Hashmap(password).stringHash();
@@ -94,7 +105,8 @@
                 openaiApiEncryptionSalt: salt,
                 openaiApiPassword: password,
                 openaiApiPasswordHash: passwordHash,
-                openaiApiKey: encryptedKey
+                openaiApiKey: encryptedKey,
+                openaiApiPasswordCreatedDate: passwordCreatedDate
             } });
             
             [showApiKeyPopup, showApiPasswordPopup] = [false, false];
@@ -114,8 +126,7 @@
                 return;
             }
             if (!checkApiPassword()) {
-                errorMessage = "Wrong Password!";
-                showError = true;
+                showApiKeyPopup = true;
                 return;
             }
         }
@@ -128,19 +139,21 @@
         showApiKeyPopup = false;
     }
 
-    function updateMaxDivHeight() {
-        maxDivHeight = window.innerHeight - 150;
-    }
-
     function checkApiKey() {
         tsvscode.postMessage({type: "onCheckApiKey", value: ''});
         window.addEventListener("message", (event) => {
             const message = event.data;
             switch (message.type) {
                 case "onApiKeyExists": {
-                    passwordRequired = message.value;
+                    let daysSinceCreated = 0;
+                    [passwordRequired, daysSinceCreated] = message.value;
+                    
+                    if (daysSinceCreated != 0) longtermStorage = true;
+                    
                     if (passwordRequired) {
-                        showApiPasswordPopup = true;
+                        if ((longtermStorage && daysSinceCreated >= 7) || !longtermStorage) {
+                            showApiPasswordPopup = true;
+                        }
                     }
                     break;
                 }
@@ -152,17 +165,9 @@
         });
     }
 
-    function showSettingsPanel() {
-        settingsPanelVisible = true;
-    }
-
-    function hideSettingsPanel() {
-        settingsPanelVisible = false;
-    }
-
     function toggleApiKeyPopup() {
+        if (showApiPasswordPopup) return;
         editMode = true;
-
         try {
             if (!showApiKeyPopup && anyEmptyFields()) {
                 tsvscode.postMessage({type: "onFetchSavedData", value: ''});
@@ -172,6 +177,7 @@
                     switch (message.type) {
                         case "onDataFetched": {
                             [completionsDeployment, baseUrl, password] = message.value;
+                            apiKey = 'a'.repeat(30);
                             if (completionsDeployment || baseUrl) {
                                 isAzure = true;
                             }
@@ -223,6 +229,28 @@
         errorMessage = '';
         showError = false;
     }
+
+    function regenResponse() {
+        regenResponseVal = true;
+        fetchText();
+        regenResponseVal = false;
+    }
+
+    function showSettingsPanel() {
+        settingsPanelVisible = true;
+    }
+
+    function hideSettingsPanel() {
+        settingsPanelVisible = false;
+    }
+
+    function showRegenPanel() {
+        regenPanelVisible = true;
+    }
+
+    function hideRegenPanel() {
+        regenPanelVisible = false;
+    }
 </script>
 
 
@@ -247,15 +275,35 @@
         margin-bottom: 8px;
     }
 
-    label.checkbox-label {
+    .retry-icon {
         position: absolute;
+        cursor: pointer;
         bottom: 0;
         left: 0;
         margin: 8px;
+        margin-bottom: 8px;
         display: flex;
         align-items: center;
         gap: 4px;
         font-size: smaller;
+        background-color: black;
+        border-radius: 8px;
+        padding: 8px;
+        color: #fff;
+    }
+
+    .settings-icon {
+        position: absolute;
+        cursor: pointer;
+        bottom: 0px;
+        right: 0px;
+        margin: 8px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        direction: rtl;
+        gap: 4px;
+        font-size: 12px;
         background-color: black;
         border-radius: 8px;
         padding: 8px;
@@ -303,73 +351,50 @@
     }
 
     .error-message {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background-color: #ff4444;
-      color: #fff;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-      text-align: center;
-      z-index: 1003;
-      pointer-events: auto;
-  }
-
-  .error-message button {
-      background-color: #fff;
-      color: #ff4444;
-      border: 1px solid #ff4444;
-      padding: 5px 10px;
-      margin-top: 5px;
-      cursor: pointer;
-      border-radius: 3px;
-  }
-
-  .gear-icon {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    cursor: pointer;
-    font-size: 18px;
-    pointer-events: all;
-    z-index: 1001;
-  }
-
-  .settings-panel {
-    position: absolute;
-    bottom: 0px;
-    right: 25px;
-    background-color: #000;
-    color: #fff;
-    font-size: 10px;
-    padding: 10px;
-    border-radius: 5px;
-    z-index: 1000;
-  }
-
-  .popup {
         position: fixed;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
+        background-color: #ff4444;
+        color: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        text-align: center;
+        z-index: 1004;
+        pointer-events: auto;
+    }
+
+    .error-message button {
+        background-color: #fff;
+        color: #ff4444;
+        border: 1px solid #ff4444;
+        padding: 5px 10px;
+        margin-top: 5px;
+        cursor: pointer;
+        border-radius: 3px;
+    }
+
+    .popup {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -60%);
         background-color: white;
         padding: 20px;
         border: 1px solid #ccc;
         border-radius: 10px; /* Rounded borders */
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        z-index: 1000;
         pointer-events: auto;
         text-align: center;
         max-height: 500px;
         overflow-y: auto;
-        z-index: 1002;
+        z-index: 1003;
     }
 
     .popup h2 {
-        font-size: 1.2em; /* Smaller font size */
-        color: #333; /* Darker font color */
+        font-size: 1.2em;
+        color: #333;
     }
 
     .popup input {
@@ -381,15 +406,44 @@
         box-sizing: border-box;
     }
 
+    .popup label.checkbox-label {
+        position: relative;
+        cursor: auto;
+        display: table-cell;
+        vertical-align: middle;
+        text-align: left;
+        font-size: small;
+        background-color: transparent;
+        color: black;
+    }
+
+    label.checkbox-label input {
+        margin-right: 8px; /* Adjust the margin between the checkbox and the text */
+        width: 12px;
+        height: 12px;
+    }
+
+    label.checkbox-label span {
+        flex-grow: 1; /* Allow the text to take up remaining space */
+        min-width: fit-content;
+        margin-right: 8px;
+    }
+
+    label.checkbox-label select {
+        font-size: small;
+        margin-bottom: 5px;
+    }
+
     .button-container {
         display: table-cell;
         vertical-align: middle;
         width: 100%;
         top: 10px;
+        margin-bottom: 2px;
     }
 
     .popup button {
-        background-color: #04AA6D; /* Green background */
+        background-color: #04AA6D;
         color: white;
         padding: 10px 15px;
         border: none;
@@ -410,95 +464,71 @@
         right: 5px;
         cursor: pointer;
         font-size: 16px;
+        font-weight: bold;
     }
 
-  .help-tip {
-    position: absolute;
-    top: 18px;
-    right: 18px;
-    text-align: center;
-    background-color: #BCDBEA;
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    font-size: 14px;
-    line-height: 26px;
-    cursor: default;
-  }
-
-  .help-tip:before {
-    content: '?';
-    font-weight: bold;
-    color: #fff;
-  }
-
-  .help-tip:hover p {
-    display: block;
-    transform-origin: 100% 0%;
-
-    -webkit-animation: fadeIn 0.3s ease-in-out;
-    animation: fadeIn 0.3s ease-in-out;
-  }
-
-  .help-tip p {
-    /* The tooltip */
-    display: none;
-    text-align: left;
-    background-color: #1E2021;
-    padding: 20px;
-    width: 300px;
-    position: absolute;
-    border-radius: 3px;
-    box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.2);
-    right: -4px;
-    color: #FFF;
-    font-size: 13px;
-    line-height: 1.4;
-  }
-
-  .help-tip p:before {
-    /* The pointer of the tooltip */
-    position: absolute;
-    content: '';
-    width: 0;
-    height: 0;
-    border: 6px solid transparent;
-    border-bottom-color: #1E2021;
-    right: 10px;
-    top: -12px;
-  }
-
-  .help-tip p:after {
-    /* Prevents the tooltip from being hidden */
-    width: 100%;
-    height: 40px;
-    content: '';
-    position: absolute;
-    top: -40px;
-    left: 0;
-  }
-
-  /* CSS animation */
-  @-webkit-keyframes fadeIn {
-    0% {
-      opacity: 0;
-      transform: scale(0.6);
+    .help-tip {
+        position: absolute;
+        top: 18px;
+        right: 18px;
+        text-align: center;
+        background-color: #BCDBEA;
+        border-radius: 50%;
+        width: 18px;
+        height: 18px;
+        font-size: 12px;
+        line-height: 16px;
+        cursor: default;
     }
 
-    100% {
-      opacity: 100%;
-      transform: scale(1);
+    .help-tip:before {
+        content: '?';
+        font-weight: bold;
+        color: #fff;
     }
-  }
 
-  @keyframes fadeIn {
-    0% {
-      opacity: 0;
+    .help-tip p {
+        /* The tooltip */
+        display: block;
+        text-align: center;
+        background-color: #1E2021;
+        padding: 20px;
+        min-width: 130px;
+        position: absolute;
+        border-radius: 3px;
+        box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.2);
+        right: -4px;
+        color: #FFF;
+        font-size: 12px;
+        line-height: 1.4;
+        z-index: 1002;
     }
-    100% {
-      opacity: 100%;
+
+    .help-tip p:before {
+        /* The pointer of the tooltip */
+        position: absolute;
+        content: '';
+        width: 0;
+        height: 0;
+        border: 6px solid transparent;
+        border-bottom-color: #1E2021;
+        right: 10px;
+        top: -12px;
     }
-  }
+
+    .help-tip p:after {
+        /* Prevents the tooltip from being hidden */
+        width: 100%;
+        height: 40px;
+        content: '';
+        position: absolute;
+        top: -40px;
+        left: 0;
+    }
+
+    .tooltip-container {
+        position: relative;
+    }
 </style>
 
 {#if showError}
@@ -508,7 +538,7 @@
   </div>
 {/if}
 
-<div>
+<div style="min-width: 165px;">
     <div class={showApiKeyPopup || showApiPasswordPopup ? "disabled-container":"container"}>
         <h1>Green Coding</h1>
         <div class="editable-div-container">
@@ -523,16 +553,26 @@
                 }}
             ></div>
             {#if textColor === "black"}
-                <label class="checkbox-label">
-                    <input type="checkbox" bind:checked={regenResponse} />
-                    Regenerate response
-                </label>
+                <!-- svelte-ignore a11y-click-events-have-key-events -->
+                <div class="retry-icon" on:click={regenResponse} on:mouseenter={showRegenPanel} on:mouseleave={hideRegenPanel}>
+                    <div style="width: 13px; height: 13px; margin: 3px;">
+                        <FaRedoAlt />
+                    </div>
+                    {#if regenPanelVisible}
+                        <div transition:fly={{ duration: 300, delay: 100, x: -25, y:0, opacity: 0, easing: quintOut}}>
+                            Regenerate response
+                        </div>
+                    {/if}
+                </div>
             {/if}
             <!-- svelte-ignore a11y-click-events-have-key-events -->
             <!-- svelte-ignore a11y-mouse-events-have-key-events -->
-            <div class="gear-icon" on:click={toggleApiKeyPopup} on:mouseenter={showSettingsPanel} on:mouseleave={hideSettingsPanel}>⚙️
+            <div class="settings-icon" on:click={toggleApiKeyPopup} on:mouseenter={showSettingsPanel} on:mouseleave={hideSettingsPanel}>
+                <div style="width: 18px; height: 18px;">
+                    <DiAptana />
+                </div>
                 {#if settingsPanelVisible}
-                    <div class="settings-panel" transition:fly={{ duration: 300, x: 25, y:0, opacity: 0, easing: quintOut}}>
+                    <div transition:fly={{ duration: 300, delay: 100, x: 25, y:0, opacity: 0, easing: quintOut}}>
                         Settings
                     </div>
                 {/if}
@@ -541,10 +581,16 @@
         <button on:click={fetchText}>Get Feedback</button>
     </div>
 
-    {#if showApiKeyPopup}
+    {#if showApiKeyPopup && !showApiPasswordPopup}
         <div class="popup">
             <!-- svelte-ignore a11y-click-events-have-key-events -->
-            <span class="close-button" on:click={toggleApiKeyPopup}>X</span>
+            {#if editMode}
+            <span class="close-button" on:click={toggleApiKeyPopup}>
+                <div style="width: 18px; height: 18px; color: black">
+                    <FaRegWindowClose />
+                </div>
+            </span>
+            {/if}
             {#if !editMode}
                 <select bind:value={isAzure} on:change={() => isAzureChanged()}>
                     <option value={true}>Azure OpenAI</option>
@@ -553,28 +599,73 @@
             {/if}
             {#if isAzure}
                 <h2>Enter your Completions API information</h2>
-                <input type="text" bind:value={completionsDeployment} placeholder="Deployment Name" />
-                <div class="help-tip">
-                    <p>Helpful tooltip content</p>
+                <!-- svelte-ignore a11y-mouse-events-have-key-events -->
+                <div class="tooltip-container">
+                    <input type="text" bind:value={completionsDeployment} placeholder="Deployment Name" />
+                    <div class="help-tip" style="top: 15%; right: -19px" on:mouseenter={() => tooltip1visible = true} 
+                        on:mouseleave={() => tooltip1visible = false}>
+                        {#if tooltip1visible}
+                            <p transition:fade={{ duration: 200 }}>Name of the resource that corresponds to the deployment of your completions module 
+                                (e.g., gpt-3.5-turbo)</p>
+                        {/if}
+                    </div>
                 </div>
 
-                <h2>Enter your Azure base URL, Azure OpenAI API Key and a password</h2>
-                <input type="text" bind:value={baseUrl} placeholder="Base URL" />
+                <h2>Enter your Azure base URL and Azure OpenAI API Key</h2>
+                <div class="tooltip-container">
+                    <input type="text" bind:value={baseUrl} placeholder="Base URL" />
+                    <div class="help-tip" style="top: 15%; right: -19px" on:mouseenter={() => tooltip2visible = true} 
+                        on:mouseleave={() => tooltip2visible = false}>
+                        {#if tooltip2visible}
+                            <p transition:fade={{ duration: 200 }}>Base URL of your Azure OpenAI deployment should look like this:<br>
+                                https://your-resource-name.openai.azure.com</p>
+                        {/if}
+                    </div>
+                </div>
             {/if}
             {#if !isAzure}
-                <h2>Enter your OpenAI API Key and a password</h2>
+                <h2>Enter your OpenAI API Key</h2>
             {/if}
-            <input type="password" bind:value={apiKey} placeholder="API Key" />
-            <input type="password" bind:value={password} placeholder={editMode ? "Confirm Password" : "Password (optional)"}/>
-            <button on:click={editMode ? editValues : saveApiKey}>Save</button>
-            <button on:click={clearSavedData}>Clear Saved Data</button>
+            <div class="tooltip-container">
+                <input type="password" bind:value={apiKey} placeholder="API Key" />
+                <div class="help-tip" style="top: 15%; right: -19px" on:mouseenter={() => tooltip3visible = true} on:mouseleave={() => tooltip3visible = false}>
+                    {#if tooltip3visible}
+                        <p transition:fade={{ duration: 200 }}>Secret API key that is used to connect to your OpenAI {isAzure ? "resource" : "account"}</p>
+                    {/if}
+                </div>
+            </div>
+
+            {#if !editMode}
+                <label class="checkbox-label">
+                    <input type="checkbox" bind:checked={passwordRequired}/>
+                    <span>Set a password</span>
+                    <select bind:value={longtermStorage}>
+                        <option value={true}>Ask every 7 days</option>
+                        <option value={false}>Ask on startup</option>
+                    </select>
+                </label>
+            {/if}
+            {#if passwordRequired || !editMode}
+                <div class="tooltip-container">
+                    <input type="password" disabled={!passwordRequired} style={passwordRequired ? "background-color: white;" : "background-color: lightgray;"} bind:value={password} placeholder={editMode ? "Confirm Password" : "Password (optional)"}/>
+                    <div class="help-tip" style="top: 15%; right: -19px" on:mouseenter={() => tooltip4visible = true} on:mouseleave={() => tooltip4visible = false}>
+                        {#if tooltip4visible}
+                            <p transition:fade={{ duration: 200 }}>
+                                {editMode ? "Enter your password to apply the changes" : 
+                                "An optional password that is used to encrypt your API key prior to storage"}
+                            </p>
+                        {/if}
+                    </div>
+                </div>
+            {/if}
+
+            <button class="button-container" on:click={editMode ? editValues : saveApiKey}>Save</button>
+            <button class="button-container" on:click={clearSavedData}>Clear Saved Data</button>
         </div>
     {/if}
 
     {#if showApiPasswordPopup && passwordRequired}
         <div class="popup">
-            <!-- svelte-ignore a11y-click-events-have-key-events -->
-            <span class="close-button" on:click={() => showApiPasswordPopup = false}>X</span>
             <h2>Enter your password</h2>
             <input type="password" bind:value={password} placeholder="Password"/>
             <button class = "button-container" on:click={checkApiPassword}>Proceed</button>

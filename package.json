@@ -98,6 +98,7 @@
     "rollup-plugin-svelte": "^7.1.6",
     "svelte": "^4.2.2",
     "svelte-check": "^3.5.2",
+    "svelte-icons": "^2.1.0",
     "svelte-preprocess": "^5.0.4",
     "ts-loader": "^9.5.0",
     "typescript": "^5.2.2",
