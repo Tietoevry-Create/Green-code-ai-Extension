@@ -13,8 +13,7 @@ export class AIIntegration {
     private _context?: vscode.ExtensionContext;
     private _contextFileName = 'context.txt';
 
-    constructor(embeddingsDepoName: string, apiVersion: string, completionsDepoName: string, baseUrl: string, apiKey: string,
-         context: vscode.ExtensionContext | undefined) {
+    constructor(completionsDepoName: string, baseUrl: string, apiKey: string, context: vscode.ExtensionContext | undefined) {
         this._baseUrl = baseUrl;
         this._apiKey = apiKey;
         this._context = context;

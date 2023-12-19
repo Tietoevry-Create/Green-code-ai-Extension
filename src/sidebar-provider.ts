@@ -4,12 +4,12 @@ import { AIIntegration } from './ai-integration';
 import { TextFormatter } from './text-formatter';
 import { AESEncryption } from './aes-encryption';
 import CryptoJS from 'crypto-js';
+import { Hashmap } from './hashmap';
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
     _view?: vscode.WebviewView;
     _doc?: vscode.TextDocument;
     _context: vscode.ExtensionContext;
-    _apiPasswordHash: string;
 
     constructor(private context: vscode.ExtensionContext) {
         this._context = context;
@@ -35,8 +35,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     // Retrieve data from globalState and send it back to the webview
                     const {azureOpenaiCompletionsDeploymentName, azureOpenaiBaseUrl, openaiApiEncryptionSalt, openaiApiPassword, openaiApiPasswordHash,
                         openaiApiKey, openaiApiPasswordCreatedDate} = data.value;
-                    
-                    this._apiPasswordHash = openaiApiPasswordHash;
 
                     this._context?.globalState.update("azureOpenaiCompletionsDeploymentName", azureOpenaiCompletionsDeploymentName);
                     this._context?.globalState.update("azureOpenaiBaseUrl", azureOpenaiBaseUrl);
@@ -51,9 +49,38 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     }
                     break;
                 case "onEdit": {
-                    const {azureOpenaiCompletionsDeploymentName, azureOpenaiBaseUrl, unencryptedApiKey} = data.value;
+                    const {azureOpenaiCompletionsDeploymentName, azureOpenaiBaseUrl, unencryptedApiKey, openaiApiPassword, openaiApiPasswordCreatedDate} = data.value;
 
-                    if (unencryptedApiKey) {
+                    if (openaiApiPassword) {
+                        let openaiApiEncryptionSalt: string | undefined = this._context?.globalState.get("openaiApiEncryptionSalt");
+                        let openaiApiKey = '';
+                        let newKey256Bits = CryptoJS.PBKDF2(openaiApiPassword, openaiApiEncryptionSalt || '', { keySize: 256/32 }).toString();;
+                        let openaiApiPasswordHash = new Hashmap(openaiApiPassword).stringHash();
+                        
+                        if (unencryptedApiKey) {
+                            openaiApiKey = new AESEncryption(unencryptedApiKey, newKey256Bits).encrypt();
+                        } else {
+                            let openaiApiEncryptedKey: string | undefined = '';
+                            await this._context?.secrets.get("openaiApiKey").then((key) => {openaiApiEncryptedKey = key});
+                            let openaiApiPassword: string | undefined = '';
+                            await this._context?.secrets.get("openaiApiPassword").then((password) => {openaiApiPassword = password});
+
+                            let key256Bits = CryptoJS.PBKDF2(openaiApiPassword, openaiApiEncryptionSalt || '', { keySize: 256/32 });
+                            let decryptedApiKey = new AESEncryption(openaiApiEncryptedKey || '', key256Bits.toString(CryptoJS.enc.Hex)).decrypt();
+                            openaiApiKey = new AESEncryption(decryptedApiKey, newKey256Bits).encrypt();
+                        }
+                        
+                        this._context?.secrets.store("openaiApiKey", openaiApiKey);
+                        this._context?.secrets.store("openaiApiPassword", openaiApiPassword);
+                        this._context?.secrets.store("openaiApiPasswordHash", openaiApiPasswordHash);
+                        
+                        if (openaiApiPasswordCreatedDate && openaiApiPasswordCreatedDate != 0) {
+                            this._context?.globalState.update("openaiApiPasswordCreatedDate", openaiApiPasswordCreatedDate);
+                        } else {
+                            this._context?.globalState.update("openaiApiPasswordCreatedDate", undefined);
+                        }
+                    }
+                    else if (unencryptedApiKey) {
                         let openaiApiPassword: string | undefined = '';
                         let openaiApiEncryptionSalt: string | undefined = this._context?.globalState.get("openaiApiEncryptionSalt");
                         await this._context?.secrets.get("openaiApiPassword").then((password) => {openaiApiPassword = password});
@@ -83,7 +110,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     let daysSinceCreated : number;
                     if (openaiApiPasswordCreatedDate) {
                         let currentDate = Date.now();
-                        daysSinceCreated = (currentDate - openaiApiPasswordCreatedDate!)/86400000;
+                        daysSinceCreated = (currentDate - openaiApiPasswordCreatedDate)/86400000;
                     } else {
                         daysSinceCreated = 0;
                     }
@@ -113,7 +140,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     }
 
                     if (openaiApiPasswordHash == data.value) {
-                        this._apiPasswordHash = data.value;
                         this._view?.webview.postMessage({ type: "onCorrectPassword", value: '' });
                     }
                     else {
@@ -150,8 +176,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 case "onFetchText": {
                     console.log("running onFetchText");
 
-                    let azureOpenaiEmbeddingsDeploymentName: string | undefined = this.context?.globalState.get("azureOpenaiEmbeddingsDeploymentName");
-                    let openaiApiVersion: string | undefined = this.context?.globalState.get("openaiApiVersion");
                     let azureOpenaiCompletionsDeploymentName: string | undefined = this.context?.globalState.get("azureOpenaiCompletionsDeploymentName");
                     let azureOpenaiBaseUrl: string | undefined = this.context?.globalState.get("azureOpenaiBaseUrl");
                     let openaiApiEncryptionSalt: string | undefined = this._context?.globalState.get("openaiApiEncryptionSalt");
@@ -162,8 +186,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     
                     let key256Bits = CryptoJS.PBKDF2(openaiApiPassword, openaiApiEncryptionSalt || '', { keySize: 256/32 });
                     let apiKey = new AESEncryption(openaiApiEncryptedKey || '', key256Bits.toString(CryptoJS.enc.Hex)).decrypt();
-                    let aiIntegration = new AIIntegration(azureOpenaiEmbeddingsDeploymentName || '', openaiApiVersion || '', 
-                    azureOpenaiCompletionsDeploymentName || '', azureOpenaiBaseUrl || '', apiKey || '', this._context);
+                    let aiIntegration = new AIIntegration(azureOpenaiCompletionsDeploymentName || '', azureOpenaiBaseUrl || '', 
+                    apiKey || '', this._context);
                     let editor = vscode.window.activeTextEditor;
 
                     if (editor === undefined) {

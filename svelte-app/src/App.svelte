@@ -5,9 +5,12 @@
     import { Hashmap } from '../../out/hashmap';
     import { AESEncryption } from '../../out/aes-encryption';
     import CryptoJS from 'crypto-js';
+    // @ts-expect-error
     import DiAptana from 'svelte-icons/di/DiAptana.svelte';
+    // @ts-expect-error
     import FaRedoAlt from 'svelte-icons/fa/FaRedoAlt.svelte';
-    import FaRegWindowClose from 'svelte-icons/fa/FaRegWindowClose.svelte'
+    // @ts-expect-error
+    import FaRegWindowClose from 'svelte-icons/fa/FaRegWindowClose.svelte';
     
     const placeholder = "Highlight a piece of code and press `Get Feedback`!";
     let text = placeholder;
@@ -15,23 +18,65 @@
     let maxDivHeight = window.innerHeight - 170;
     let regenResponseVal = false;
     let errorMessage = '';
-    let showError = false;
     let isAzure = false;
     let settingsPanelVisible = false;
     let regenPanelVisible = false;
-    let [tooltip1visible, tooltip2visible, tooltip3visible, tooltip4visible] = [false, false, false, false];
+    let tooltipVisible = [false, false, false, false, false, false];
     let showApiKeyPopup = false;
     let showApiPasswordPopup = false;
     let passwordRequired = false;
+    let passwordChange = false;
     let editMode = false;
     let longtermStorage = false;
+    let correctPassword = false;
     let completionsDeployment = "";
     let baseUrl = "";
     let apiKey = "";
     let password = "";
+    let newPassword = "";
+
+    let isOpen = {passwordType: false, openaiType: false};
+    let selectedOption = {passwordType: '', openaiType: ''};
+    let passwordSelectOptions = ["Ask Everytime", "Ask Every 7 Days"];
+    let openaiSelectOptions = ["OpenAI", "Azure OpenAI"];
+
+    // @ts-expect-error
+    function toggleDropdown(optionType) {
+        if (optionType == "openaiType") {
+            isOpen.openaiType = !isOpen.openaiType;
+        }
+        else if (optionType == "passwordType") {
+            isOpen.passwordType = !isOpen.passwordType;
+        }
+
+        if (editMode)  {
+            passwordChange = !passwordChange;
+        }
+        if (optionType == "passwordType") {
+            passwordRequired = !passwordRequired;
+        }
+    }
+
+    // @ts-expect-error
+    function selectOption(option, optionType) {
+        if (optionType == "passwordType") {
+            selectedOption.passwordType = option;
+        }
+        else if (optionType == "openaiType") {
+            selectedOption.openaiType = option;
+        }
+        toggleDropdown(optionType);
+
+        if (optionType == "passwordType") {
+            longtermStorage = selectedOption.passwordType == passwordSelectOptions[1];
+        }
+        else if (optionType == "openaiType") {
+            isAzure = selectedOption.openaiType == openaiSelectOptions[1];
+            if (!isAzure) isAzureChanged();
+        }
+    }
 
     onMount(() => {
-    // Listen for messages from the extension
         window.addEventListener("message", (event) => {
             const message = event.data;
             switch (message.type) {
@@ -40,18 +85,54 @@
                     textColor = "black";
                     break;
                 }
-            }
-        });
-        window.addEventListener("message", (event) => {
-            const message = event.data;
-            switch (message.type) {
                 case "onError": {
-                    errorMessage = message.value.message || message.value.code;
-                    showError = true;
+                    triggerError(message.value.message || message.value.code);
                     text = placeholder;
+                    break;
+                }
+                case "onCorrectPassword": {
+                    [showApiKeyPopup, showApiPasswordPopup] = [false, false];
+                    if (editMode) {
+                        correctPassword = true;
+                        editValues();
+                    }
+                    break;
+                }
+                case "onIncorrectPassword": {
+                    triggerError("Incorrect Password!");
+                    correctPassword = false;
+                    break;
+                }
+                case "onDataFetched": {
+                    [completionsDeployment, baseUrl, password] = message.value;
+                    apiKey = 'a'.repeat(30);
+                    if (completionsDeployment || baseUrl) {
+                        isAzure = true;
+                    }
+                    passwordRequired = password ? true : false;
+                    password = '';
+                    showApiKeyPopup = true;
+                    break;
+                }
+                case "onApiKeyExists": {
+                    let daysSinceCreated = 0;
+                    [passwordRequired, daysSinceCreated] = message.value;
+                    
+                    if (daysSinceCreated != 0) longtermStorage = true;
+                    
+                    if (passwordRequired) {
+                        if ((longtermStorage && daysSinceCreated >= 7) || !longtermStorage) {
+                            showApiPasswordPopup = true;
+                        }
+                    }
+                    break;
+                }
+                case "onApiKeyNotFound": {
+                    showApiKeyPopup = true;
+                    break;
                 }
             }
-        })
+        });
         window.addEventListener("resize", updateMaxDivHeight);
         checkApiKey();
     });
@@ -66,11 +147,9 @@
 
     function clearSavedData() {
         tsvscode.postMessage({ type: "onClearData", value: '' });
-        [completionsDeployment, baseUrl, apiKey, password] = ['', '', '', ''];
+        [completionsDeployment, baseUrl, apiKey, password, newPassword] = Array(5).fill('');
+        [showApiPasswordPopup, editMode, passwordRequired] = Array(3).fill(false);
         showApiKeyPopup = true;
-        showApiPasswordPopup = false;
-        editMode = false;
-        passwordRequired = false;
     }
 
     function fetchText() {
@@ -86,8 +165,7 @@
     function saveApiKey() {
         try {
             if ((isAzure && (!baseUrl || !completionsDeployment)) || !apiKey) {
-                errorMessage = `Fill in all fields!`;
-                showError = true;
+                triggerError(`Fill in all fields!`);
                 return;
             }
 
@@ -111,89 +189,61 @@
             
             [showApiKeyPopup, showApiPasswordPopup] = [false, false];
         } catch (error) {
-            errorMessage = `Error saving API key: ${error}`;
-            showError = true;
+            triggerError(`Error saving API key: ${error}`);
         }
     }
 
     function editValues() {
-        let unencryptedKey = '';
-        
-        if (passwordRequired) {
+        if (passwordRequired && !correctPassword) {
             if (password == '') {
-                errorMessage = "Enter Password to Save Changes";
-                showError = true;
+                triggerError("Enter Password to Save Changes");
                 return;
             }
-            if (!checkApiPassword()) {
-                showApiKeyPopup = true;
-                return;
-            }
+            checkApiPassword();
+            return;
         }
 
+        correctPassword = false;
+        let unencryptedKey = '';
+        if (apiKey && apiKey != 'a'.repeat(30)) {
+            unencryptedKey = apiKey;
+        }
+
+        let openaiApiPassword = undefined;
+        let openaiApiPasswordCreatedDate = undefined;
+
+        if (passwordChange) {
+            openaiApiPassword = newPassword;
+            openaiApiPasswordCreatedDate = longtermStorage ? Date.now() : 0;
+
+            passwordChange = false;
+            newPassword = '';
+        }
         tsvscode.postMessage({ type: "onEdit", value: {
             azureOpenaiCompletionsDeploymentName: completionsDeployment,
             azureOpenaiBaseUrl: baseUrl,
-            openaiApiKey: unencryptedKey
+            unencryptedApiKey: unencryptedKey,
+            openaiApiPassword,
+            openaiApiPasswordCreatedDate
         } });
-        showApiKeyPopup = false;
     }
 
     function checkApiKey() {
         tsvscode.postMessage({type: "onCheckApiKey", value: ''});
-        window.addEventListener("message", (event) => {
-            const message = event.data;
-            switch (message.type) {
-                case "onApiKeyExists": {
-                    let daysSinceCreated = 0;
-                    [passwordRequired, daysSinceCreated] = message.value;
-                    
-                    if (daysSinceCreated != 0) longtermStorage = true;
-                    
-                    if (passwordRequired) {
-                        if ((longtermStorage && daysSinceCreated >= 7) || !longtermStorage) {
-                            showApiPasswordPopup = true;
-                        }
-                    }
-                    break;
-                }
-                case "onApiKeyNotFound": {
-                    showApiKeyPopup = true;
-                    break;
-                }
-            }
-        });
     }
 
-    function toggleApiKeyPopup() {
+    function toggleSettings() {
         if (showApiPasswordPopup) return;
+        
         editMode = true;
         try {
             if (!showApiKeyPopup && anyEmptyFields()) {
                 tsvscode.postMessage({type: "onFetchSavedData", value: ''});
-
-                window.addEventListener("message", (event) => {
-                    const message = event.data;
-                    switch (message.type) {
-                        case "onDataFetched": {
-                            [completionsDeployment, baseUrl, password] = message.value;
-                            apiKey = 'a'.repeat(30);
-                            if (completionsDeployment || baseUrl) {
-                                isAzure = true;
-                            }
-                            passwordRequired = password ? true : false;
-                            password = '';
-                            break;
-                        }
-                    }
-                });
-                showApiKeyPopup = true;
             } else {
                 [showApiKeyPopup, showApiPasswordPopup] = [!showApiKeyPopup, false];
             }
         } catch (error) {
-            errorMessage = `${error}`;
-            showError = true;
+            triggerError(`${error}`);
         }
     }
 
@@ -210,24 +260,15 @@
         let passwordHash = new Hashmap(password).stringHash();
         password = '';
         tsvscode.postMessage({ type: "onCheckPassword", value: passwordHash });
-        window.addEventListener("message", (event) => {
-            const message = event.data;
-            switch (message.type) {
-            case "onCorrectPassword":
-                [showApiKeyPopup, showApiPasswordPopup] = [false, false];
-                return true;
-            case "onIncorrectPassword":
-                errorMessage = 'Incorrect Password';
-                showError = true;
-                return false;
-            }
-        });
-        return false;
     }
 
+    // @ts-expect-error
+    function triggerError(error) {
+        errorMessage += '\n' + error;
+    }
+    
     function clearError() {
         errorMessage = '';
-        showError = false;
     }
 
     function regenResponse() {
@@ -273,6 +314,61 @@
     label {
         display: block;
         margin-bottom: 8px;
+    }
+
+    .custom-select {
+        position: relative;
+        display: inline-block;
+        font-size: small;
+        text-align: left;
+        color: black;
+        z-index: 1001;
+        min-width: 130px;
+        padding-bottom: 5px;
+    }
+
+    .custom-select .select-arrow {
+        position: absolute;
+        top: 50%;
+        right: 5px;
+        transform: translateY(-60%);
+        pointer-events: none;
+        
+    }
+
+    .custom-select .select-button {
+        cursor: pointer;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background-color: white;
+        padding-left: 5px;
+        padding-right: 20px;
+        padding-bottom: 3px;
+    }
+
+    .custom-select .options-list {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        max-height: 150px;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        border-top: none;
+        border-radius: 0 0 4px 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        background-color: #fff;
+        color: black;
+    }
+
+    .custom-select .option {
+        padding: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+    .custom-select .option:hover {
+        background-color: #f0f0f0;
     }
 
     .retry-icon {
@@ -379,7 +475,7 @@
         position: absolute;
         top: 50%;
         left: 50%;
-        transform: translate(-50%, -60%);
+        transform: translate(-50%, -50%);
         background-color: white;
         padding: 20px;
         border: 1px solid #ccc;
@@ -429,9 +525,23 @@
         margin-right: 8px;
     }
 
-    label.checkbox-label select {
-        font-size: small;
+    .popup label.password-label {
+        position: relative;
+        text-align: center;
+        vertical-align: middle;
+        background-color: black;
+        min-height: 20px;
+        border-radius: 5px;
+        padding: 5px;
+    }
+
+    label.password-label span {
+        border-radius: 5px;
+        padding: 5px;
         margin-bottom: 5px;
+        font-size: 12px;
+        cursor: pointer;
+        pointer-events: all;
     }
 
     .button-container {
@@ -531,7 +641,7 @@
     }
 </style>
 
-{#if showError}
+{#if errorMessage != ''}
   <div class="error-message">
       <p>{errorMessage}</p>
       <button on:click={clearError}>Dismiss</button>
@@ -567,12 +677,12 @@
             {/if}
             <!-- svelte-ignore a11y-click-events-have-key-events -->
             <!-- svelte-ignore a11y-mouse-events-have-key-events -->
-            <div class="settings-icon" on:click={toggleApiKeyPopup} on:mouseenter={showSettingsPanel} on:mouseleave={hideSettingsPanel}>
+            <div class="settings-icon" on:click={toggleSettings} on:mouseenter={showSettingsPanel} on:mouseleave={hideSettingsPanel}>
                 <div style="width: 18px; height: 18px;">
                     <DiAptana />
                 </div>
                 {#if settingsPanelVisible}
-                    <div transition:fly={{ duration: 300, delay: 100, x: 25, y:0, opacity: 0, easing: quintOut}}>
+                    <div transition:fly={{ duration: 300, delay: 100, x: 25, y: 0, opacity: 0, easing: quintOut }}>
                         Settings
                     </div>
                 {/if}
@@ -585,38 +695,47 @@
         <div class="popup">
             <!-- svelte-ignore a11y-click-events-have-key-events -->
             {#if editMode}
-            <span class="close-button" on:click={toggleApiKeyPopup}>
+            <span class="close-button" on:click={toggleSettings}>
                 <div style="width: 18px; height: 18px; color: black">
                     <FaRegWindowClose />
                 </div>
             </span>
             {/if}
             {#if !editMode}
-                <select bind:value={isAzure} on:change={() => isAzureChanged()}>
-                    <option value={true}>Azure OpenAI</option>
-                    <option value={false}>OpenAI</option>
-                </select>
+                <div class="custom-select">
+                    <!-- svelte-ignore a11y-click-events-have-key-events -->
+                    <div class="select-button" on:click={() => toggleDropdown("openaiType")}>
+                        {selectedOption.openaiType || openaiSelectOptions[0]}
+                    </div>
+                    <div class="select-arrow">&#9660;</div>
+                    <div class="options-list" style="display: {isOpen.openaiType ? 'block' : 'none'};">
+                        {#each openaiSelectOptions as option (option)}
+                            <!-- svelte-ignore a11y-click-events-have-key-events -->
+                            <div class="option" on:click={() => selectOption(option, "openaiType")}>{option}</div>
+                        {/each}
+                    </div>
+                </div>
             {/if}
             {#if isAzure}
-                <h2>Enter your Completions API information</h2>
+                <h2>{editMode ? '' : "Enter your "}Completions API information</h2>
                 <!-- svelte-ignore a11y-mouse-events-have-key-events -->
                 <div class="tooltip-container">
                     <input type="text" bind:value={completionsDeployment} placeholder="Deployment Name" />
-                    <div class="help-tip" style="top: 15%; right: -19px" on:mouseenter={() => tooltip1visible = true} 
-                        on:mouseleave={() => tooltip1visible = false}>
-                        {#if tooltip1visible}
+                    <div class="help-tip" style="top: 15%; right: -19px" on:mouseenter={() => tooltipVisible[0] = true} 
+                        on:mouseleave={() => tooltipVisible[0] = false}>
+                        {#if tooltipVisible[0]}
                             <p transition:fade={{ duration: 200 }}>Name of the resource that corresponds to the deployment of your completions module 
                                 (e.g., gpt-3.5-turbo)</p>
                         {/if}
                     </div>
                 </div>
 
-                <h2>Enter your Azure base URL and Azure OpenAI API Key</h2>
+                <h2>{editMode ? '' : "Enter your "}Azure base URL and Azure OpenAI API Key</h2>
                 <div class="tooltip-container">
                     <input type="text" bind:value={baseUrl} placeholder="Base URL" />
-                    <div class="help-tip" style="top: 15%; right: -19px" on:mouseenter={() => tooltip2visible = true} 
-                        on:mouseleave={() => tooltip2visible = false}>
-                        {#if tooltip2visible}
+                    <div class="help-tip" style="top: 15%; right: -19px" on:mouseenter={() => tooltipVisible[1] = true} 
+                        on:mouseleave={() => tooltipVisible[1] = false}>
+                        {#if tooltipVisible[1]}
                             <p transition:fade={{ duration: 200 }}>Base URL of your Azure OpenAI deployment should look like this:<br>
                                 https://your-resource-name.openai.azure.com</p>
                         {/if}
@@ -624,39 +743,95 @@
                 </div>
             {/if}
             {#if !isAzure}
-                <h2>Enter your OpenAI API Key</h2>
+                <h2>{editMode ? '' : "Enter your "}OpenAI API Key</h2>
             {/if}
             <div class="tooltip-container">
                 <input type="password" bind:value={apiKey} placeholder="API Key" />
-                <div class="help-tip" style="top: 15%; right: -19px" on:mouseenter={() => tooltip3visible = true} on:mouseleave={() => tooltip3visible = false}>
-                    {#if tooltip3visible}
+                <div class="help-tip" style="top: 15%; right: -19px" on:mouseenter={() => tooltipVisible[2] = true} on:mouseleave={() => tooltipVisible[2] = false}>
+                    {#if tooltipVisible[2]}
                         <p transition:fade={{ duration: 200 }}>Secret API key that is used to connect to your OpenAI {isAzure ? "resource" : "account"}</p>
                     {/if}
                 </div>
             </div>
 
             {#if !editMode}
-                <label class="checkbox-label">
-                    <input type="checkbox" bind:checked={passwordRequired}/>
-                    <span>Set a password</span>
-                    <select bind:value={longtermStorage}>
-                        <option value={true}>Ask every 7 days</option>
-                        <option value={false}>Ask on startup</option>
-                    </select>
+                <label class="checkbox-label" style="display: table-cell; vertical-align: middle; pointer-events: none;">
+                    <input type="checkbox" style="pointer-events: all;" bind:checked={passwordRequired}/>
+                    <span style="pointer-events: all;">Set a password</span>
+                    <div class="custom-select" style={passwordRequired ? "pointer-events: all;" : "color: darkgray; pointer-events: none;"}>
+                        <!-- svelte-ignore a11y-click-events-have-key-events -->
+                        <div class="select-button" on:click={() => toggleDropdown("passwordType")}>
+                            {selectedOption.passwordType || passwordSelectOptions[0]}
+                        </div>
+                        <div class="select-arrow">&#9660;</div>
+                        <div class="options-list" style="display: {isOpen.passwordType ? 'block' : 'none'};">
+                            {#each passwordSelectOptions as option (option)}
+                                <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                <div class="option" on:click={() => selectOption(option, "passwordType")}>{option}</div>
+                            {/each}
+                        </div>
+                    </div>
+                </label>
+            {/if}
+            {#if passwordRequired && editMode}
+                <label class="password-label" style="{passwordChange ? "pointer-events: none;" : "cursor: pointer;"}">
+                    <input type="checkbox" style="visibility: hidden; width: 0%; margin: 0%;" bind:checked={passwordChange}/>
+                    <span style= "{passwordChange ? "color: black; background-color: white; font-weight: bold;" : "color: white; background-color: black;"}">
+                        {passwordChange ? "Cancel" : "Change Password"}
+                    </span>
+                    {#if passwordChange}
+                        <div class="tooltip-container" style="margin-top: 10px; pointer-events: all;">
+                            <input type="password" bind:value={password} placeholder="Current Password"/>
+                            <div class="help-tip" style="top: 15%; right: -24px;" on:mouseenter={() => tooltipVisible[4] = true} on:mouseleave={() => tooltipVisible[4] = false}>
+                                {#if tooltipVisible[4]}
+                                    <p transition:fade={{ duration: 200 }}>
+                                        Enter your current password
+                                    </p>
+                                {/if}
+                            </div>
+                        </div>
+                        <div class="tooltip-container" style="pointer-events: all;">
+                            <input type="password" bind:value={newPassword} placeholder="New Password"/>
+                            <div class="help-tip" style="top: 15%; right: -24px;" on:mouseenter={() => tooltipVisible[5] = true} on:mouseleave={() => tooltipVisible[5] = false}>
+                                {#if tooltipVisible[5]}
+                                    <p transition:fade={{ duration: 200 }}>
+                                        Enter the new password
+                                    </p>
+                                {/if}
+                            </div>
+                        </div>
+                        <div class="custom-select" style="pointer-events: all;">
+                            <!-- svelte-ignore a11y-click-events-have-key-events -->
+                            <div class="select-button" on:click={() => toggleDropdown("passwordType")}>
+                                {selectedOption.passwordType || passwordSelectOptions[0]}
+                            </div>
+                            <div class="select-arrow">&#9660;</div>
+                            <div class="options-list" style="display: {isOpen.passwordType ? 'block' : 'none'};">
+                                {#each passwordSelectOptions as option (option)}
+                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                    <div class="option" on:click={() => selectOption(option, "passwordType")}>{option}</div>
+                                {/each}
+                            </div>
+                        </div>
+                    {/if}
                 </label>
             {/if}
             {#if passwordRequired || !editMode}
-                <div class="tooltip-container">
-                    <input type="password" disabled={!passwordRequired} style={passwordRequired ? "background-color: white;" : "background-color: lightgray;"} bind:value={password} placeholder={editMode ? "Confirm Password" : "Password (optional)"}/>
-                    <div class="help-tip" style="top: 15%; right: -19px" on:mouseenter={() => tooltip4visible = true} on:mouseleave={() => tooltip4visible = false}>
-                        {#if tooltip4visible}
-                            <p transition:fade={{ duration: 200 }}>
-                                {editMode ? "Enter your password to apply the changes" : 
-                                "An optional password that is used to encrypt your API key prior to storage"}
-                            </p>
-                        {/if}
+                
+                {#if !passwordChange}
+                    <div class="tooltip-container">
+                        <input type="password" disabled={!passwordRequired} style={passwordRequired ? "background-color: white;" : "background-color: lightgray;"} 
+                        bind:value={password} placeholder={editMode ? "Confirm Password" : "Password (optional)"}/>
+                        <div class="help-tip" style="top: 15%; right: -19px" on:mouseenter={() => tooltipVisible[3] = true} on:mouseleave={() => tooltipVisible[3] = false}>
+                            {#if tooltipVisible[3]}
+                                <p transition:fade={{ duration: 200 }}>
+                                    {editMode ? "Enter your password to apply the changes" : 
+                                    "An optional password that is used to encrypt your API key prior to storage"}
+                                </p>
+                            {/if}
+                        </div>
                     </div>
-                </div>
+                {/if}
             {/if}
 
             <button class="button-container" on:click={editMode ? editValues : saveApiKey}>Save</button>
