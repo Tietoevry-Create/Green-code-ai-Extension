@@ -10,6 +10,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     _view?: vscode.WebviewView;
     _doc?: vscode.TextDocument;
     _context: vscode.ExtensionContext;
+    _errorRetry = 0;
 
     constructor(private context: vscode.ExtensionContext) {
         this._context = context;
@@ -47,6 +48,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     } else {
                         this._context?.globalState.update("openaiApiPasswordCreatedDate", undefined);
                     }
+
+                    this._view?.webview.postMessage({type: "onRegistered", value: ''});
                     break;
                 case "onEdit": {
                     const {azureOpenaiCompletionsDeploymentName, azureOpenaiBaseUrl, unencryptedApiKey, openaiApiPassword, openaiApiPasswordCreatedDate} = data.value;
@@ -93,6 +96,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         this._context?.globalState.update("azureOpenaiCompletionsDeploymentName", azureOpenaiCompletionsDeploymentName);
                     if (azureOpenaiBaseUrl)
                         this._context?.globalState.update("azureOpenaiBaseUrl", azureOpenaiBaseUrl);
+                    
+                    this._view?.webview.postMessage({type: "onEditComplete", value: ''});
                     break;
                 }
                 case "onCheckApiKey": {
@@ -171,6 +176,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     this.context?.secrets.delete("openaiApiPasswordHash");
                     this.context?.secrets.delete("openaiApiPassword");
                     this._context?.globalState.update("openaiApiPasswordCreatedDate", undefined);
+
+                    this._view?.webview.postMessage({type: "onClearedData", value: ''});
                     break;
                 }
                 case "onFetchText": {
@@ -197,15 +204,29 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
                     let text = "";
                     try {
-                        await aiIntegration.sendToAIForAnalysis(editor.document.getText(editor.selection), data.value).then((value) => {text = value});
+                        await aiIntegration.sendToAIForAnalysis(editor.document.getText(editor.selection), editor.selection.start.line, data.value).then((value) => {text = value});
                     } catch(error) {
                         console.log(error);
                         this._view?.webview.postMessage({ type: "onError", value: error });
                         break;
                     }
                     
-                    let formattedText = new TextFormatter(text).formatText();
-                    // console.log(text + '\n\n' + "----------------" + '\n\n' + formattedText);
+                    let formattedText = '';
+                    try {
+                        formattedText = new TextFormatter().formatText(text);
+                    } catch (error) {
+                        if (this._errorRetry < 2) {
+                            this._view?.webview.postMessage({type: "onRegenResponse", value: ''})
+                            this._errorRetry++;
+                        } else {
+                            this._errorRetry = 0;
+                            console.log(text, '\n');
+                            console.log(error);
+                            this._view?.webview.postMessage({type: "onError", value: "ChatGPT provided Invalid JSON format!\nNote: GPT-3.5-Turbo versions other than 1106 are not supported."});
+                        }
+                        break;
+                    }
+                    console.log(text + '\n\n' + "----------------" + '\n\n' + formattedText);
                     
                     if (formattedText) {
                         this._view?.webview.postMessage({ type: "onSelectedText", value: formattedText });

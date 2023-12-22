@@ -20,10 +20,10 @@ export class AIIntegration {
         this._completionsDepoName = completionsDepoName;
     }
 
-    public async sendToAIForAnalysis(code: string, regen:boolean): Promise<string> {
+    public async sendToAIForAnalysis(code: string, startAt: number, regen:boolean): Promise<string> {
         
         const contextFilePath = path.join(__dirname, '..', this._contextFileName);
-        const temperature = 0.5;
+        const temperature = 0.7;
 
         let azureClient = undefined;
         let client = undefined;
@@ -40,35 +40,42 @@ export class AIIntegration {
         }
 
         const rawDocs = fs.readFileSync(contextFilePath);
+        const lnCode = this.addLineNumber(code, startAt);
 
         let question = '';
         if (code.length < 50) {
-            return "Please provide a larger code snippet.";
+            return '{"Error":  "Please provide a larger code snippet."}';
         }
         else if (code.length > 5000) {
-            return "Code snippet is too large. Please provide a smaller snippet.";
+            return '{"Error": "Code snippet is too large. Please provide a smaller snippet."}';
         }
 
-        let pointerNumber = 5;
+        let jsonObjNo = 5;
         if (code.length > 3000) {
-            pointerNumber = 10;
+            jsonObjNo = 10;
         }
         else if (code.length < 500) {
-            pointerNumber = 3;
+            jsonObjNo = 3;
         }
 
-        question = 'How can I make the following code more sustainable and energy-efficient?:\n' + code;
+        question = 'How can I make the following code more sustainable and energy-efficient?:\n' + lnCode;
         
-        const content = `Fulfill requests based on the given context. Write your answer as a list of pointers. 
-        Do not write any text that is not part of a pointer. Include the most important points as a pointer list. Make the feedback specific to the code snippet. 
-        Keep general feedback to a minimum. Keep the number of pointers to ${pointerNumber} or less.
+        const context = `Fulfill requests based on the given context (as well as your general knowledge):
         
-        ${rawDocs}
-        `;
-        console.log(content);
+        ${rawDocs}`;
+
+        const instructions = `Your answer should be specific to the code snippet. Always mention the line number when referring to specific parts of the code.
+        Avoid writing generalized feedback. Do not give include a suggestion unless you can mention which line in the code is related to it. Every single JSON object
+        should come with line numbers that point to which part of the code that object's suggestion is applicable to. Provide examples and code suggestions where 
+        applicable. Your suggestions should always be directly relevant to the code. Always write your answer in JSON format. 
+        Keep the number of JSON objects to ${jsonObjNo} or less. Make sure none of the JSON keys are the same.`;
+
         const messages = [
             {
-                "role": "system", "content": content
+                "role": "system", "content": context
+            },
+            {
+                "role": "user", "content": instructions
             },
             {
                 "role": "user", "content": question
@@ -88,14 +95,19 @@ export class AIIntegration {
                 response = await client?.chat.completions.create({
                     messages: [
                         {
-                            "role": "system", "content": content
+                            "role": "system", "content": context
+                        },
+                        {
+                            "role": "system", "content": instructions
                         },
                         {
                             "role": "user", "content": question
                         },
                       ],
-                    model: "gpt-3.5-turbo"
-                })
+                    model: "gpt-3.5-turbo-1106",
+                    response_format: { "type": "json_object" },
+                    temperature
+                });
             }
 
             if (response && response.choices) {
@@ -138,14 +150,19 @@ export class AIIntegration {
             response = await client?.chat.completions.create({
                 messages: [
                     {
-                        "role": "system", "content": content
+                        "role": "system", "content": context
+                    },
+                    {
+                        "role": "system", "content": instructions
                     },
                     {
                         "role": "user", "content": question
                     },
                   ],
-                model: "gpt-3.5-turbo"
-            })
+                model: "gpt-3.5-turbo-1106",
+                response_format: { "type": "json_object" },
+                temperature
+            });
         }
         let end = Date.now();
         console.log(`${(end - start) / 1000} seconds`);
@@ -170,6 +187,18 @@ export class AIIntegration {
 
         this._context?.globalState.update(questionHash.toString(), answer);
         return answer;
+     }
+
+     private addLineNumber(code: string, startAt: number): string {
+        let lnCode: string[] = [];
+        let lnCounter = startAt + 1;
+        
+        code.split('\n').forEach(line => {
+            lnCode.push(lnCounter + '   ' + line);
+            lnCounter++;
+        });
+
+        return lnCode.join('\n');
      }
 }
 

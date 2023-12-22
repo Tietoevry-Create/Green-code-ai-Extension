@@ -1,135 +1,49 @@
 export class TextFormatter {
-    private _output = "";
 
-    constructor(private readonly _inputText: string) { }
+    constructor() { }
 
-    public formatText():string {
-        this.separateParagraphs();
-        this.rewriteListInHtml();
-        return this._output;
-    }
+    public formatText(inputText: string):string {
+        let output = ["<ul>"];
+        inputText = inputText.replaceAll('`', '').replace('json', '');
+        const jsonObj = JSON.parse(inputText);
 
-    private separateParagraphs() {
-        let lines = this._inputText.split('\n');
+        for (const key in jsonObj) {
+            if (jsonObj.hasOwnProperty(key)) {
+                let value = this.formatValue(jsonObj[key]);
+                let body = '';
 
-        lines.forEach((line) => {
-            if (line != '' && line != '\n') {
-                this._output += line + '\n';
+                if (key == "pointers") {
+                    body = value;
+                } else {
+                    let title = "<b>" + key + "</b>";
+                    body = "<li>" + title + ': ' + value + "</li>";
+                }
+
+                output.push(body);
             }
-        })
+        }
+
+        output.push("</ul>")
+        return output.join('\n') + '\n';
     }
 
-    private rewriteListInHtml() {
-        let output = this._output.split('\n');
-        let newOutput: string[] = [];
-    
-        if (this.isOrderedList(this._output)) {
-            newOutput = this.rewriteOrderedList(output);
-        } else if (this.isUnorderedList(this._output)) {
-            newOutput = this.rewriteUnorderedList(output);
+    private formatValue(value: any): string {
+        if (Array.isArray(value)) {
+            // Check if the array contains objects (key-value dictionaries)
+            if (value.length > 0 && typeof value[0] === 'object') {
+                // Format each object as a separate list item
+                let subList = value.map(obj => {
+                    return "<li>" + this.formatText(JSON.stringify(obj)) + "</li>";
+                }).join('');
+                return "<ul>" + subList + "</ul>";
+            } else {
+                // Format the array normally
+                return "<ul>" + value.map(item => "<li>" + this.formatValue(item) + "</li>").join('') + "</ul>";
+            }
+        } else if (typeof value === 'object') {
+            return this.formatText(JSON.stringify(value));
         } else {
-            newOutput = this.rewriteNormalList(output);
+            return value;
         }
-    
-        this._output = newOutput.join('\n\n') + '\n';
     }
-    
-    private rewriteOrderedList(output: string[]): string[] {
-        let newOutput: string[] = [];
-        let listOngoing = false;
-    
-        output.forEach((line) => {
-            let newline: string = line.trim();
-    
-            if (this.isOrderedList(newline)) {
-                if (this.isTitledList(newline)) {
-                    let colonIndex = newline.indexOf(':');
-                    newline = "<li>" + "<b>" + newline.slice(3, colonIndex + 1) + "</b>" + newline.slice(colonIndex + 1,) + "</li>";
-                } else {
-                    newline = "<li>" + newline.slice(3,) + "</li>";
-                }
-                if (!listOngoing) {
-                    listOngoing = true;
-                    newline = "<ol>" + newline;
-                }
-            } else if (newline == '' || newline == '\n') {
-                return;
-            } else if (listOngoing && !this.isUnorderedList(newline)) {
-                listOngoing = false;
-                newline = "</ol>" + newline;
-            }
-    
-            newOutput.push(newline);
-        });
-    
-        newOutput.push("</ol>");
-        return newOutput;
-    }
-    
-    private rewriteUnorderedList(output: string[]): string[] {
-        let newOutput: string[] = [];
-        let listOngoing = false;
-    
-        output.forEach((line) => {
-            let newline: string = line.trim();
-    
-            if (this.isUnorderedList(newline)) {
-                if (this.isTitledList(newline)) {
-                    let colonIndex = newline.indexOf(':');
-                    newline = "<li>" + "<b>" + newline.slice(2, colonIndex + 1) + "</b>" + newline.slice(colonIndex + 1,) + "</li>";
-                } else {
-                    newline = "<li>" + newline.slice(2,) + "</li>";
-                }
-                if (!listOngoing) {
-                    listOngoing = true;
-                    newline = "<ul>" + newline;
-                }
-            } else if (newline == '' || newline == '\n') {
-                return;
-            } else if (listOngoing) {
-                listOngoing = false;
-                newline = "</ul>" + newline;
-            }
-    
-            newOutput.push(newline);
-        });
-    
-        newOutput.push("</ul>");
-        return newOutput;
-    }
-    
-    private rewriteNormalList(output: string[]): string[] {
-        let newOutput: string[] = [];
-    
-        output.forEach((line) => {
-            let newline: string = line.trim();
-    
-            if (this.isTitledList(newline)) {
-                let colonIndex = newline.indexOf(':');
-                newline = "<b>" + newline.slice(0, colonIndex + 1) + "</b>" + newline.slice(colonIndex + 1);
-            }
-    
-            newOutput.push(newline);
-        });
-    
-        return newOutput;
-    }    
-
-    private isOrderedList(text: string):boolean {
-        const ordredListPattern = /\d+\.\s+/;
-        return ordredListPattern.test(text);
-    }
-
-    private isUnorderedList(text: string):boolean {
-        const unordredListPattern = /-\s+/;
-        return unordredListPattern.test(text);
-    }
-
-    private isTitledList(text: string):boolean {
-        if (text.slice(0, text.length/2).includes(':')) {
-            return true;
-        }
-        return false;
-    }
-
 }

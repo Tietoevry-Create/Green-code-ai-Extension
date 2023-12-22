@@ -27,8 +27,11 @@
     let passwordRequired = false;
     let passwordChange = false;
     let editMode = false;
-    let longtermStorage = false;
+    let longtermPassword = false;
+    let longtermPasswordTemp = false;
     let correctPassword = false;
+    let loading = false;
+    let errorRequiresRegen = false;
     let completionsDeployment = "";
     let baseUrl = "";
     let apiKey = "";
@@ -40,42 +43,6 @@
     let passwordSelectOptions = ["Ask Everytime", "Ask Every 7 Days"];
     let openaiSelectOptions = ["OpenAI", "Azure OpenAI"];
 
-    // @ts-expect-error
-    function toggleDropdown(optionType) {
-        if (optionType == "openaiType") {
-            isOpen.openaiType = !isOpen.openaiType;
-        }
-        else if (optionType == "passwordType") {
-            isOpen.passwordType = !isOpen.passwordType;
-        }
-
-        if (editMode)  {
-            passwordChange = !passwordChange;
-        }
-        if (optionType == "passwordType") {
-            passwordRequired = !passwordRequired;
-        }
-    }
-
-    // @ts-expect-error
-    function selectOption(option, optionType) {
-        if (optionType == "passwordType") {
-            selectedOption.passwordType = option;
-        }
-        else if (optionType == "openaiType") {
-            selectedOption.openaiType = option;
-        }
-        toggleDropdown(optionType);
-
-        if (optionType == "passwordType") {
-            longtermStorage = selectedOption.passwordType == passwordSelectOptions[1];
-        }
-        else if (optionType == "openaiType") {
-            isAzure = selectedOption.openaiType == openaiSelectOptions[1];
-            if (!isAzure) isAzureChanged();
-        }
-    }
-
     onMount(() => {
         window.addEventListener("message", (event) => {
             const message = event.data;
@@ -83,11 +50,17 @@
                 case "onSelectedText": {
                     text = message.value;
                     textColor = "black";
+                    errorRequiresRegen = false;
+                    break;
+                }
+                case "onRegenResponse": {
+                    regenResponse();
                     break;
                 }
                 case "onError": {
-                    triggerError(message.value.message || message.value.code);
+                    triggerError(message.value.message || message.value.code || message.value);
                     text = placeholder;
+                    errorRequiresRegen = true;
                     break;
                 }
                 case "onCorrectPassword": {
@@ -112,23 +85,39 @@
                     passwordRequired = password ? true : false;
                     password = '';
                     showApiKeyPopup = true;
+                    loading = false;
                     break;
                 }
                 case "onApiKeyExists": {
                     let daysSinceCreated = 0;
                     [passwordRequired, daysSinceCreated] = message.value;
                     
-                    if (daysSinceCreated != 0) longtermStorage = true;
+                    if (daysSinceCreated != 0) longtermPassword = true;
                     
                     if (passwordRequired) {
-                        if ((longtermStorage && daysSinceCreated >= 7) || !longtermStorage) {
+                        if ((longtermPassword && daysSinceCreated >= 7) || !longtermPassword) {
                             showApiPasswordPopup = true;
                         }
                     }
+                    loading = false;
                     break;
                 }
                 case "onApiKeyNotFound": {
                     showApiKeyPopup = true;
+                    loading = false;
+                    break;
+                }
+                case "onClearedData": {
+                    loading = false;
+                    break;
+                }
+                case "onRegistered": {
+                    loading = false;
+                    break;
+                }
+                case "onEditComplete": {
+                    loading = false;
+                    [showApiKeyPopup, showApiPasswordPopup] = [false, false];
                     break;
                 }
             }
@@ -146,10 +135,47 @@
     }
 
     function clearSavedData() {
+        loading = true;
         tsvscode.postMessage({ type: "onClearData", value: '' });
         [completionsDeployment, baseUrl, apiKey, password, newPassword] = Array(5).fill('');
-        [showApiPasswordPopup, editMode, passwordRequired] = Array(3).fill(false);
+        [showApiPasswordPopup, editMode, passwordRequired, isAzure, longtermPassword, longtermPasswordTemp] = Array(6).fill(false);
         showApiKeyPopup = true;
+    }
+
+    // @ts-expect-error
+    function toggleDropdown(optionType) {
+        if (optionType == "openaiType") {
+            isOpen.openaiType = !isOpen.openaiType;
+        }
+        else if (optionType == "passwordType") {
+            isOpen.passwordType = !isOpen.passwordType;
+        }
+
+        if (editMode)  {
+            passwordChange = !passwordChange;
+        }
+        else if (optionType == "passwordType") {
+            passwordRequired = !passwordRequired;
+        }
+    }
+
+    // @ts-expect-error
+    function selectOption(option, optionType) {
+        if (optionType == "passwordType") {
+            selectedOption.passwordType = option;
+        }
+        else if (optionType == "openaiType") {
+            selectedOption.openaiType = option;
+        }
+        toggleDropdown(optionType);
+
+        if (optionType == "passwordType") {
+            longtermPasswordTemp = selectedOption.passwordType == passwordSelectOptions[1];
+        }
+        else if (optionType == "openaiType") {
+            isAzure = selectedOption.openaiType == openaiSelectOptions[1];
+            if (!isAzure) isAzureChanged();
+        }
     }
 
     function fetchText() {
@@ -169,8 +195,10 @@
                 return;
             }
 
+            loading = true;
             passwordRequired = password ? true : false;
-            let passwordCreatedDate = longtermStorage ? Date.now() : 0;
+            let passwordCreatedDate = longtermPasswordTemp ? Date.now() : 0;
+            longtermPassword = longtermPasswordTemp;
 
             var salt = CryptoJS.lib.WordArray.random(128/8);
             var passwordHash = new Hashmap(password).stringHash();
@@ -203,6 +231,7 @@
             return;
         }
 
+        loading = true;
         correctPassword = false;
         let unencryptedKey = '';
         if (apiKey && apiKey != 'a'.repeat(30)) {
@@ -214,8 +243,15 @@
 
         if (passwordChange) {
             openaiApiPassword = newPassword;
-            openaiApiPasswordCreatedDate = longtermStorage ? Date.now() : 0;
-
+            if (openaiApiPassword == '') {
+                passwordRequired = false;
+                longtermPassword = false;
+            } else {
+                passwordRequired = true;
+                openaiApiPasswordCreatedDate = longtermPasswordTemp ? Date.now() : 0;
+                longtermPassword = longtermPasswordTemp;
+            }
+            
             passwordChange = false;
             newPassword = '';
         }
@@ -229,6 +265,7 @@
     }
 
     function checkApiKey() {
+        loading = true;
         tsvscode.postMessage({type: "onCheckApiKey", value: ''});
     }
 
@@ -239,6 +276,7 @@
         try {
             if (!showApiKeyPopup && anyEmptyFields()) {
                 tsvscode.postMessage({type: "onFetchSavedData", value: ''});
+                loading = true;
             } else {
                 [showApiKeyPopup, showApiPasswordPopup] = [!showApiKeyPopup, false];
             }
@@ -641,14 +679,16 @@
     }
 </style>
 
-{#if errorMessage != ''}
-  <div class="error-message">
-      <p>{errorMessage}</p>
-      <button on:click={clearError}>Dismiss</button>
-  </div>
+{#if errorMessage || loading}
+    <div class="error-message" style={loading ? "background-color: black;" : ""}>
+        <p>{!loading ? errorMessage : "Loading..."}</p>
+        {#if !loading}
+            <button on:click={clearError}>Dismiss</button>
+        {/if}
+    </div>
 {/if}
 
-<div style="min-width: 165px;">
+<div style={loading ? "pointer-events: none;" : ''}>
     <div class={showApiKeyPopup || showApiPasswordPopup ? "disabled-container":"container"}>
         <h1>Green Coding</h1>
         <div class="editable-div-container">
@@ -662,7 +702,7 @@
                     text = text.replace(/<\/?span[^>]*>/g, "");
                 }}
             ></div>
-            {#if textColor === "black"}
+            {#if textColor === "black" || errorRequiresRegen}
                 <!-- svelte-ignore a11y-click-events-have-key-events -->
                 <div class="retry-icon" on:click={regenResponse} on:mouseenter={showRegenPanel} on:mouseleave={hideRegenPanel}>
                     <div style="width: 13px; height: 13px; margin: 3px;">
@@ -773,7 +813,7 @@
                     </div>
                 </label>
             {/if}
-            {#if passwordRequired && editMode}
+            {#if (passwordRequired || longtermPassword) && editMode}
                 <label class="password-label" style="{passwordChange ? "pointer-events: none;" : "cursor: pointer;"}">
                     <input type="checkbox" style="visibility: hidden; width: 0%; margin: 0%;" bind:checked={passwordChange}/>
                     <span style= "{passwordChange ? "color: black; background-color: white; font-weight: bold;" : "color: white; background-color: black;"}">

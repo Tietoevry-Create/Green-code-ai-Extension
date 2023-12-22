@@ -1,7 +1,5 @@
 Energy Metrics: Highlight CPU, memory, and I/O metrics.
-Review Guidelines: Emphasize sustainability practices.
 Power-Consuming Parts: Pinpoint such code segments.
-Feedback: Provide feedback on optimizing power-consuming parts.
 Documentation and Testing: Stress the importance of well-documented, modular code, TDD.
 Efficient Algorithms: Suggest hash tables for constant time complexity.
 Memoization: Optimize Fibonacci with memoization.
