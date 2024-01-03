@@ -151,10 +151,7 @@
             isOpen.passwordType = !isOpen.passwordType;
         }
 
-        if (editMode)  {
-            passwordChange = !passwordChange;
-        }
-        else if (optionType == "passwordType") {
+        if (optionType == "passwordType" && !editMode) {
             passwordRequired = !passwordRequired;
         }
     }
@@ -222,7 +219,7 @@
     }
 
     function editValues() {
-        if (passwordRequired && !correctPassword) {
+        if ((passwordRequired || longtermPassword) && !correctPassword) {
             if (password == '') {
                 triggerError("Enter Password to Save Changes");
                 return;
@@ -246,6 +243,7 @@
             if (openaiApiPassword == '') {
                 passwordRequired = false;
                 longtermPassword = false;
+                openaiApiPassword = "nopassword";
             } else {
                 passwordRequired = true;
                 openaiApiPasswordCreatedDate = longtermPasswordTemp ? Date.now() : 0;
@@ -444,7 +442,7 @@
         color: #fff;
     }
 
-    button {
+    .ui-button {
         width: 100%;
         box-sizing: border-box;
         padding: 8px;
@@ -452,6 +450,28 @@
         background-color: #04AA6D;
         color: #fff;
         cursor: pointer;
+    }
+
+    .label-container button {
+        box-sizing: border-box;
+        width: 50%;
+        border: 1px solid #ff4444;
+        background-color: #ff4444;
+        color: white;
+        cursor: pointer;
+        border-radius: 4px;
+        font-weight: bold;
+        font-size: 12px;
+        height: 25px;
+        pointer-events: all;
+    }
+
+    .label-container {
+        display: table-cell;
+    }
+
+    .label-container span {
+        width: 50%;
     }
 
     .container {
@@ -563,7 +583,7 @@
         margin-right: 8px;
     }
 
-    .popup label.password-label {
+    .password-label {
         position: relative;
         text-align: center;
         vertical-align: middle;
@@ -571,12 +591,12 @@
         min-height: 20px;
         border-radius: 5px;
         padding: 5px;
+        margin-bottom: 8px;
     }
 
-    label.password-label span {
+    .password-label span {
         border-radius: 5px;
         padding: 5px;
-        margin-bottom: 5px;
         font-size: 12px;
         cursor: pointer;
         pointer-events: all;
@@ -588,16 +608,13 @@
         width: 100%;
         top: 10px;
         margin-bottom: 2px;
-    }
-
-    .popup button {
+        box-sizing: border-box;
         background-color: #04AA6D;
-        color: white;
+        color: #fff;
         padding: 10px 15px;
         border: none;
         border-radius: 25px;
         cursor: pointer;
-        box-sizing: border-box;
         max-width: 150px;
         min-width: 120px;
     }
@@ -728,11 +745,11 @@
                 {/if}
             </div>
         </div>
-        <button on:click={fetchText}>Get Feedback</button>
+        <button class="ui-button" on:click={fetchText}>Get Feedback</button>
     </div>
 
     {#if showApiKeyPopup && !showApiPasswordPopup}
-        <div class="popup">
+        <div class="popup" style={loading ? "pointer-events: none;" : ''}>
             <!-- svelte-ignore a11y-click-events-have-key-events -->
             {#if editMode}
             <span class="close-button" on:click={toggleSettings}>
@@ -796,9 +813,9 @@
 
             {#if !editMode}
                 <label class="checkbox-label" style="display: table-cell; vertical-align: middle; pointer-events: none;">
-                    <input type="checkbox" style="pointer-events: all;" bind:checked={passwordRequired}/>
-                    <span style="pointer-events: all;">Set a password</span>
-                    <div class="custom-select" style={passwordRequired ? "pointer-events: all;" : "color: darkgray; pointer-events: none;"}>
+                    <input type="checkbox" style={loading ? "pointer-events: none;" : "pointer-events: all;"} bind:checked={passwordRequired}/>
+                    <span style={loading ? "pointer-events: none;" : "pointer-events: all;"}>Set a password</span>
+                    <div class="custom-select" style={(passwordRequired && !loading) ? "pointer-events: all;" : "color: darkgray; pointer-events: none;"}>
                         <!-- svelte-ignore a11y-click-events-have-key-events -->
                         <div class="select-button" on:click={() => toggleDropdown("passwordType")}>
                             {selectedOption.passwordType || passwordSelectOptions[0]}
@@ -813,34 +830,42 @@
                     </div>
                 </label>
             {/if}
-            {#if (passwordRequired || longtermPassword) && editMode}
-                <label class="password-label" style="{passwordChange ? "pointer-events: none;" : "cursor: pointer;"}">
-                    <input type="checkbox" style="visibility: hidden; width: 0%; margin: 0%;" bind:checked={passwordChange}/>
-                    <span style= "{passwordChange ? "color: black; background-color: white; font-weight: bold;" : "color: white; background-color: black;"}">
-                        {passwordChange ? "Cancel" : "Change Password"}
-                    </span>
+            {#if editMode}
+                <div class="password-label" style="{(passwordChange || loading) ? "pointer-events: none;" : "cursor: pointer;"}">
+                    <div class="label-container" style="align-items: center; display: block;">
+                        <!-- svelte-ignore a11y-click-events-have-key-events -->
+                        <span style= "{passwordChange ? "color: black; background-color: white; font-weight: bold;" : "color: white; background-color: black;"}" 
+                        on:click={() => {if (!loading) passwordChange = !passwordChange;}}>
+                            {passwordChange ? "Cancel" : ((passwordRequired || longtermPassword) ? "Change Password" : "Set Password")}
+                        </span>
+                        {#if passwordChange && passwordRequired}
+                            <button on:click={() => {newPassword = ''; showApiPasswordPopup = true; editValues();}}>Delete</button>
+                        {/if}
+                    </div>
                     {#if passwordChange}
-                        <div class="tooltip-container" style="margin-top: 10px; pointer-events: all;">
-                            <input type="password" bind:value={password} placeholder="Current Password"/>
-                            <div class="help-tip" style="top: 15%; right: -24px;" on:mouseenter={() => tooltipVisible[4] = true} on:mouseleave={() => tooltipVisible[4] = false}>
-                                {#if tooltipVisible[4]}
-                                    <p transition:fade={{ duration: 200 }}>
-                                        Enter your current password
-                                    </p>
-                                {/if}
+                        {#if passwordRequired || longtermPassword}
+                            <div class="tooltip-container" style="margin-top: 10px; {loading ? "pointer-events: none;" : "pointer-events: all;"}">
+                                <input type="password" bind:value={password} placeholder="Current Password"/>
+                                <div class="help-tip" style="top: 15%; right: -24px;" on:mouseenter={() => tooltipVisible[4] = true} on:mouseleave={() => tooltipVisible[4] = false}>
+                                    {#if tooltipVisible[4]}
+                                        <p transition:fade={{ duration: 200 }}>
+                                            Enter your current password
+                                        </p>
+                                    {/if}
+                                </div>
                             </div>
-                        </div>
-                        <div class="tooltip-container" style="pointer-events: all;">
+                        {/if}
+                        <div class="tooltip-container" style="{loading ? "pointer-events: none;" : "pointer-events: all;"} {(passwordRequired || longtermPassword) ? "" : "margin-top: 10px;"}">
                             <input type="password" bind:value={newPassword} placeholder="New Password"/>
                             <div class="help-tip" style="top: 15%; right: -24px;" on:mouseenter={() => tooltipVisible[5] = true} on:mouseleave={() => tooltipVisible[5] = false}>
                                 {#if tooltipVisible[5]}
                                     <p transition:fade={{ duration: 200 }}>
-                                        Enter the new password
+                                        {(passwordRequired || longtermPassword) ? "Enter the new password" : "Enter a password"}
                                     </p>
                                 {/if}
                             </div>
                         </div>
-                        <div class="custom-select" style="pointer-events: all;">
+                        <div class="custom-select" style={loading ? "pointer-events: none;" : "pointer-events: all;"}>
                             <!-- svelte-ignore a11y-click-events-have-key-events -->
                             <div class="select-button" on:click={() => toggleDropdown("passwordType")}>
                                 {selectedOption.passwordType || passwordSelectOptions[0]}
@@ -854,7 +879,7 @@
                             </div>
                         </div>
                     {/if}
-                </label>
+                </div>
             {/if}
             {#if passwordRequired || !editMode}
                 

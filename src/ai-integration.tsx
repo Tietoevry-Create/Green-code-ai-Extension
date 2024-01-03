@@ -23,7 +23,7 @@ export class AIIntegration {
     public async sendToAIForAnalysis(code: string, startAt: number, regen:boolean): Promise<string> {
         
         const contextFilePath = path.join(__dirname, '..', this._contextFileName);
-        const temperature = 0.7;
+        const temperature = 0.9;
 
         let azureClient = undefined;
         let client = undefined;
@@ -60,15 +60,24 @@ export class AIIntegration {
 
         question = 'How can I make the following code more sustainable and energy-efficient?:\n' + lnCode;
         
-        const context = `Fulfill requests based on the given context (as well as your general knowledge):
+        const instructions = `Your answer should be specific to one or more lines in the code snippet. Always mention the line number when referring to 
+        specific parts of the code. Only give suggestions that you can attach a line number to. Keep pointers varied, detailed and tailored to the given code. Provide 
+        examples and code suggestions where applicable. Your suggestions should always be directly relevant to the code. Always write your answer in JSON format. Keep 
+        the number of JSON objects to ${jsonObjNo} or less. Make sure none of the JSON keys are the same. Every single JSON object should come with line numbers that 
+        point to which part of the code that object's suggestion is applicable to. Your response should follow this JSON format:
         
-        ${rawDocs}`;
+        {
+            "{insert title appropriate to pointer item}": "{insert pointer item} <b>Line number</b>: {insert relevant line number}",
+            "{insert title 2}": "{insert pointer item 2} <b>Line number</b>: {relevant line number}",
+            etc.
+        }
+        `;
 
-        const instructions = `Your answer should be specific to the code snippet. Always mention the line number when referring to specific parts of the code.
-        Avoid writing generalized feedback. Do not give include a suggestion unless you can mention which line in the code is related to it. Every single JSON object
-        should come with line numbers that point to which part of the code that object's suggestion is applicable to. Provide examples and code suggestions where 
-        applicable. Your suggestions should always be directly relevant to the code. Always write your answer in JSON format. 
-        Keep the number of JSON objects to ${jsonObjNo} or less. Make sure none of the JSON keys are the same.`;
+        const context = `Provide feedback on the user's code based on the given context (as well as your general knowledge):
+        
+        Context: """
+        ${rawDocs}
+        """`;
 
         const messages = [
             {
@@ -79,7 +88,7 @@ export class AIIntegration {
             },
             {
                 "role": "user", "content": question
-            },        
+            },
         ];
         
         let answer;

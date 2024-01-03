@@ -57,8 +57,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     if (openaiApiPassword) {
                         let openaiApiEncryptionSalt: string | undefined = this._context?.globalState.get("openaiApiEncryptionSalt");
                         let openaiApiKey = '';
-                        let newKey256Bits = CryptoJS.PBKDF2(openaiApiPassword, openaiApiEncryptionSalt || '', { keySize: 256/32 }).toString();;
-                        let openaiApiPasswordHash = new Hashmap(openaiApiPassword).stringHash();
+                        let newOpenaiApiPassword = (openaiApiPassword == "nopassword") ? '' : openaiApiPassword;
+                        let newKey256Bits = CryptoJS.PBKDF2(newOpenaiApiPassword, openaiApiEncryptionSalt || '', { keySize: 256/32 }).toString();;
+                        let openaiApiPasswordHash = new Hashmap(newOpenaiApiPassword).stringHash();
                         
                         if (unencryptedApiKey) {
                             openaiApiKey = new AESEncryption(unencryptedApiKey, newKey256Bits).encrypt();
@@ -74,7 +75,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         }
                         
                         this._context?.secrets.store("openaiApiKey", openaiApiKey);
-                        this._context?.secrets.store("openaiApiPassword", openaiApiPassword);
+                        this._context?.secrets.store("openaiApiPassword", newOpenaiApiPassword);
                         this._context?.secrets.store("openaiApiPasswordHash", openaiApiPasswordHash);
                         
                         if (openaiApiPasswordCreatedDate && openaiApiPasswordCreatedDate != 0) {

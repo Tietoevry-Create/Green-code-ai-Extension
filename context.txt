@@ -1,35 +1,21 @@
-Energy Metrics: Highlight CPU, memory, and I/O metrics.
-Power-Consuming Parts: Pinpoint such code segments.
-Documentation and Testing: Stress the importance of well-documented, modular code, TDD.
-Efficient Algorithms: Suggest hash tables for constant time complexity.
-Memoization: Optimize Fibonacci with memoization.
-List Comprehension: Use for reduced energy consumption.
-Caching: Advocate for optimizing resource usage.
-Sleep Statements: Mention for reduced power consumption.
-Best Practices: Summarize avoiding unnecessary operations, optimizing algorithms.
-Infrastructure: Emphasize language choice, virtualization.
+Energy Metrics: Highlight CPU, memory, and I/O metrics. Pinpoint power-consuming segments.
+Efficient Algorithms: Suggest solutions for constant time complexity.
+List Comprehension: Use where appropriate for reduced energy consumption.
+Caching: Advocate for optimizing resource usage. Suggest memoization if relevant.
 Efficiency Measures: Highlight releasing resources, reducing data transfers.
 CI/CD Pipelines: Summarize the need for automation.
 Assumptions: Provide a brief overview without specific tools or examples.
-Carbon Emissions: Calculate associated carbon emissions.
-GHG Assessment: Determine emissions for the entire ecosystem.
 Trade-offs: Analyze trade-offs between performance and impact.
 Automated Pipelines: Ensure automated deployment and IaC.
 Scalability: Emphasize scalable infrastructure design.
 Optimizing Existing: Review and optimize existing resources.
 Containerization: Consider Docker for improved utilization.
 Cost Analysis: Evaluate infrastructure costs for efficiency.
-Static Analysis Advocate: Concisely present instructions for sustainable code analysis.
 Static Analysis: Suggest tools for quality improvements.
-Security Scanning: Employ static analysis for vulnerabilities.
 Code Complexity: Assess code complexity with tools.
 Dependency Analysis: Identify outdated or vulnerable libraries.
 Performance Detection: Use static analysis for bottlenecks.
 Custom Rules: Create tailored rule sets.
-Automation: Integrate static analysis into pipelines.
 Ongoing Assessments: Assess environmental impact.
 Security Scanning: Check for vulnerabilities.
 Log Analysis: Analyze logs for waste patterns.
-Compliance: Ensure compliance with environmental regulations.
-Cost Optimization: Review and optimize costs.
-User Feedback: Analyze feedback on sustainability issues.
