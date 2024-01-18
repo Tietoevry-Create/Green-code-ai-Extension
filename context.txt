@@ -3,19 +3,10 @@ Efficient Algorithms: Suggest solutions for constant time complexity.
 List Comprehension: Use where appropriate for reduced energy consumption.
 Caching: Advocate for optimizing resource usage. Suggest memoization if relevant.
 Efficiency Measures: Highlight releasing resources, reducing data transfers.
-CI/CD Pipelines: Summarize the need for automation.
 Assumptions: Provide a brief overview without specific tools or examples.
 Trade-offs: Analyze trade-offs between performance and impact.
-Automated Pipelines: Ensure automated deployment and IaC.
-Scalability: Emphasize scalable infrastructure design.
 Optimizing Existing: Review and optimize existing resources.
-Containerization: Consider Docker for improved utilization.
 Cost Analysis: Evaluate infrastructure costs for efficiency.
-Static Analysis: Suggest tools for quality improvements.
 Code Complexity: Assess code complexity with tools.
 Dependency Analysis: Identify outdated or vulnerable libraries.
-Performance Detection: Use static analysis for bottlenecks.
 Custom Rules: Create tailored rule sets.
-Ongoing Assessments: Assess environmental impact.
-Security Scanning: Check for vulnerabilities.
-Log Analysis: Analyze logs for waste patterns.

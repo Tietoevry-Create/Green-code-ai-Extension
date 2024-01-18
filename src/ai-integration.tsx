@@ -44,10 +44,18 @@ export class AIIntegration {
 
         let question = '';
         if (code.length < 50) {
-            return '{"Error":  "Please provide a larger code snippet."}';
+            return `{
+                "pointer1": {
+                    "Error":  "Please provide a larger code snippet."
+                }
+            }`;
         }
         else if (code.length > 5000) {
-            return '{"Error": "Code snippet is too large. Please provide a smaller snippet."}';
+            return `{
+                "pointer1": {
+                    "Error":  "Code snippet is too large. Please provide a smaller snippet."
+                }
+            }`;
         }
 
         let jsonObjNo = 5;
@@ -61,14 +69,21 @@ export class AIIntegration {
         question = 'How can I make the following code more sustainable and energy-efficient?:\n' + lnCode;
         
         const instructions = `Your answer should be specific to one or more lines in the code snippet. Always mention the line number when referring to 
-        specific parts of the code. Only give suggestions that you can attach a line number to. Keep pointers varied, detailed and tailored to the given code. Provide 
-        examples and code suggestions where applicable. Your suggestions should always be directly relevant to the code. Always write your answer in JSON format. Keep 
-        the number of JSON objects to ${jsonObjNo} or less. Make sure none of the JSON keys are the same. Every single JSON object should come with line numbers that 
-        point to which part of the code that object's suggestion is applicable to. Your response should follow this JSON format:
+        specific parts of the code. Only give suggestions that you can attach a line number to. Keep pointers varied, detailed and tailored to the given
+        code. Provide examples and code suggestions where applicable. Your suggestions should always be directly relevant to a specific variable, method,
+        or a similar element in the code. You must always explain how suggestions could be implemented. Start each pointer text differently to give 
+        variation to the text, for example, avoid using 'consider' at the start of every pointer. Always write your answer in JSON format. Keep the 
+        number of JSON objects to ${jsonObjNo} or less. Make sure none of the JSON keys are the same. Your response must always follow this JSON format:
         
         {
-            "{insert title appropriate to pointer item}": "{insert pointer item} <b>Line number</b>: {insert relevant line number}",
-            "{insert title 2}": "{insert pointer item 2} <b>Line number</b>: {relevant line number}",
+            "pointer1": {
+                "{insert title appropriate to pointer text}": "{insert pointer text (not line number)}",
+                "Line number": "{insert relevant line number}"
+            },
+            "pointer2": {
+                "{insert title 2}": "{insert pointer item 2}",
+                "Line number": "{relevant line number}"
+            }
             etc.
         }
         `;

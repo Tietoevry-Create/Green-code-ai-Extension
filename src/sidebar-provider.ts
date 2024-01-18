@@ -11,9 +11,21 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     _doc?: vscode.TextDocument;
     _context: vscode.ExtensionContext;
     _errorRetry = 0;
+    _highlightLines = true;
+    
+    _highlightDecorationTypeList = [vscode.window.createTextEditorDecorationType({
+        backgroundColor: 'rgba(255, 255, 0, 0.3)',
+    }), vscode.window.createTextEditorDecorationType({
+        backgroundColor: 'rgba(255, 0, 0, 0.3)'
+    }), vscode.window.createTextEditorDecorationType({
+        backgroundColor: 'rgba(0, 255, 0, 0.3)'
+    }), vscode.window.createTextEditorDecorationType({
+        backgroundColor: 'rgba(0, 255, 255, 0.3)'
+    })];
 
     constructor(private context: vscode.ExtensionContext) {
         this._context = context;
+        vscode.window.onDidChangeTextEditorSelection(this.onDidChangeTextEditorSelection, this, context.subscriptions);
      }
     
     public resolveWebviewView(webviewView: vscode.WebviewView) {
@@ -184,6 +196,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 case "onFetchText": {
                     console.log("running onFetchText");
 
+                    this.clearAllHighlights();
+
                     let azureOpenaiCompletionsDeploymentName: string | undefined = this.context?.globalState.get("azureOpenaiCompletionsDeploymentName");
                     let azureOpenaiBaseUrl: string | undefined = this.context?.globalState.get("azureOpenaiBaseUrl");
                     let openaiApiEncryptionSalt: string | undefined = this._context?.globalState.get("openaiApiEncryptionSalt");
@@ -200,7 +214,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
                     if (editor === undefined) {
                         vscode.window.showErrorMessage('No active text editor');
-                        return;
+                        break;
                     }
 
                     let text = "";
@@ -213,8 +227,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     }
                     
                     let formattedText = '';
+                    let lineNumbers: number[][] = [];
                     try {
-                        formattedText = new TextFormatter().formatText(text);
+                        [formattedText, lineNumbers] = new TextFormatter().formatText(text);
                     } catch (error) {
                         if (this._errorRetry < 2) {
                             this._view?.webview.postMessage({type: "onRegenResponse", value: ''})
@@ -233,6 +248,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         this._view?.webview.postMessage({ type: "onSelectedText", value: formattedText });
                     } else {
                         this._view?.webview.postMessage({ type: "onSelectedText", value: "Failed loading response" });
+                    }
+
+                    if (this._highlightLines) {
+                        this.highlightLines(lineNumbers);
                     }
                     break;
                 }
@@ -253,6 +272,12 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     }
                     vscode.window.showErrorMessage(data.value);
                     break;
+                }
+                case "onChangeHighlightLines": {
+                    console.log("running onChangeHighlightLines");
+
+                    this._highlightLines = !this._highlightLines;
+                    this._view?.webview.postMessage({ type: "onHighlightLinesChanged", value: '' });
                 }
             }
         });
@@ -303,6 +328,45 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 				<script nonce="${nonce}" src="${scriptUri}"></script>
 			</body>
 			</html>`;
+    }
+
+    private highlightLines(lineNumbers: number[][]) {
+        let editor = vscode.window.activeTextEditor;
+        let decorationCounter = 0;
+
+        if (!editor) return;
+
+        lineNumbers.forEach(lineNumberSet => {
+            let decorationRanges: vscode.Range[] = [];
+
+            lineNumberSet.forEach(lineNumber => {
+                if (lineNumber >= 1 && lineNumber < editor!.document.lineCount) {
+                    // Define the range for the entire line
+                    const lineRange = new vscode.Range(lineNumber-1, 0, lineNumber-1, editor!.document.lineAt(lineNumber-1).text.length);
+                    decorationRanges.push(lineRange);
+                }
+            });
+
+            if (decorationRanges.length > 0) {
+                editor!.setDecorations(this._highlightDecorationTypeList[decorationCounter], decorationRanges);
+                decorationCounter = (decorationCounter + 1) % this._highlightDecorationTypeList.length;
+            }
+        });
+    }
+
+    private clearAllHighlights(): void {
+        const editor = vscode.window.activeTextEditor;
+
+        if (editor) {
+            // Clear all decorations in the active editor
+            for (let i = 0; i < this._highlightDecorationTypeList.length; i++) {
+                editor.setDecorations(this._highlightDecorationTypeList[i], []);
+            }
+        }
+    }
+
+    private onDidChangeTextEditorSelection(_event: vscode.TextEditorSelectionChangeEvent) {
+        this.clearAllHighlights();
     }
 }
 

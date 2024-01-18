@@ -32,6 +32,7 @@
     let correctPassword = false;
     let loading = false;
     let errorRequiresRegen = false;
+    let highlightLines = true;
     let completionsDeployment = "";
     let baseUrl = "";
     let apiKey = "";
@@ -120,6 +121,10 @@
                     [showApiKeyPopup, showApiPasswordPopup] = [false, false];
                     break;
                 }
+                case "onHighlightLinesChanged": {
+                    loading = false;
+                    break;
+                }
             }
         });
         window.addEventListener("resize", updateMaxDivHeight);
@@ -140,6 +145,11 @@
         [completionsDeployment, baseUrl, apiKey, password, newPassword] = Array(5).fill('');
         [showApiPasswordPopup, editMode, passwordRequired, isAzure, longtermPassword, longtermPasswordTemp] = Array(6).fill(false);
         showApiKeyPopup = true;
+    }
+
+    function changeHighlightLines() {
+        loading = true;
+        tsvscode.postMessage({ type: "onChangeHighlightLines", value: '' });
     }
 
     // @ts-expect-error
@@ -880,6 +890,12 @@
                         </div>
                     {/if}
                 </div>
+                <br />
+                <label class="checkbox-label" style="display: flex; align-items: center; background-color: transparent; border-color: black; border: 2px solid black; padding: 5px; border-radius: 5px;">
+                    <input type="checkbox" bind:checked={highlightLines} on:change={changeHighlightLines} style="margin-right: 8px;">
+                    <span style="font-size: 12px; color: black;">Highlight lines</span>
+                </label>
+                <br />
             {/if}
             {#if passwordRequired || !editMode}
                 
