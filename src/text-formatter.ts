@@ -1,135 +1,68 @@
 export class TextFormatter {
-    private _output = "";
 
-    constructor(private readonly _inputText: string) { }
+    constructor() { }
 
-    public formatText():string {
-        this.separateParagraphs();
-        this.rewriteListInHtml();
-        return this._output;
-    }
+    public formatText(inputText: string, highlightColorList: string[]): [string, number[][]] {
+        let output = ["<ul>"];
+        let lineNumberList: number[][] = [];
+        inputText = inputText.replaceAll('`', '').replace('json', '').replaceAll('<', '').replaceAll('>', '');
+        const jsonObj = JSON.parse(inputText);
+        let colorIndex = 0;
 
-    private separateParagraphs() {
-        let lines = this._inputText.split('\n');
+        for (const key in jsonObj) {
+            if (jsonObj.hasOwnProperty(key) && typeof jsonObj[key] === 'object') {
+                let line = '';
+                let lineNumber = '';
+                let lineNumbers: number[] = [];
 
-        lines.forEach((line) => {
-            if (line != '' && line != '\n') {
-                this._output += line + '\n';
+                for (const iKey in jsonObj[key]) {
+                    if (jsonObj[key].hasOwnProperty(iKey)) {
+                        if (iKey == "Line number") {
+                            lineNumber = jsonObj[key][iKey];
+                        }
+                        else {
+                            line = "<b>" + iKey + "</b>: " + jsonObj[key][iKey];
+                        }
+                    }
+                }
+
+                output.push("<li>" + line + 
+                    (lineNumber ? "<br /><span style='" 
+                        + (highlightColorList.length > 0 ? "background-color: " + highlightColorList[colorIndex] : '') 
+                    + "'><b>Line number:</b> " + lineNumber + "</span>" : '') 
+                + "</li>");
+                
+                const ranges = lineNumber.split(",");
+
+                // Process each range
+                for (const range of ranges) {
+                    if (range.includes("-")) {
+                        const [start, end] = range.split("-").map(Number);
+
+                        // Add all numbers in the range to the list
+                        for (let i = start; i <= end; i++) {
+                        lineNumbers.push(i);
+                        }
+                    } else {
+                        // Single line number case
+                        const lineNumber = parseInt(range, 10);
+                        lineNumbers.push(lineNumber);
+                    }
+                }
+
+                colorIndex = (colorIndex + 1) % highlightColorList.length;
+                lineNumberList.push(lineNumbers);
             }
-        })
-    }
-
-    private rewriteListInHtml() {
-        let output = this._output.split('\n');
-        let newOutput: string[] = [];
-    
-        if (this.isOrderedList(this._output)) {
-            newOutput = this.rewriteOrderedList(output);
-        } else if (this.isUnorderedList(this._output)) {
-            newOutput = this.rewriteUnorderedList(output);
-        } else {
-            newOutput = this.rewriteNormalList(output);
         }
-    
-        this._output = newOutput.join('\n\n') + '\n';
+
+        lineNumberList = this.removeDuplicateElems(lineNumberList);
+        output.push("</ul>");
+        return [output.join('\n') + '\n', lineNumberList];
     }
-    
-    private rewriteOrderedList(output: string[]): string[] {
-        let newOutput: string[] = [];
-        let listOngoing = false;
-    
-        output.forEach((line) => {
-            let newline: string = line.trim();
-    
-            if (this.isOrderedList(newline)) {
-                if (this.isTitledList(newline)) {
-                    let colonIndex = newline.indexOf(':');
-                    newline = "<li>" + "<b>" + newline.slice(3, colonIndex + 1) + "</b>" + newline.slice(colonIndex + 1,) + "</li>";
-                } else {
-                    newline = "<li>" + newline.slice(3,) + "</li>";
-                }
-                if (!listOngoing) {
-                    listOngoing = true;
-                    newline = "<ol>" + newline;
-                }
-            } else if (newline == '' || newline == '\n') {
-                return;
-            } else if (listOngoing) {
-                listOngoing = false;
-                newline = "</ol>" + newline;
-            }
-    
-            newOutput.push(newline);
+
+    private removeDuplicateElems(array: any[]): any[] {
+        return array.sort().filter(function(item, pos, ary) {
+            return !pos || item != ary[pos - 1];
         });
-    
-        newOutput.push("</ol>");
-        return newOutput;
     }
-    
-    private rewriteUnorderedList(output: string[]): string[] {
-        let newOutput: string[] = [];
-        let listOngoing = false;
-    
-        output.forEach((line) => {
-            let newline: string = line.trim();
-    
-            if (this.isUnorderedList(newline)) {
-                if (this.isTitledList(newline)) {
-                    let colonIndex = newline.indexOf(':');
-                    newline = "<li>" + "<b>" + newline.slice(2, colonIndex + 1) + "</b>" + newline.slice(colonIndex + 1,) + "</li>";
-                } else {
-                    newline = "<li>" + newline.slice(2,) + "</li>";
-                }
-                if (!listOngoing) {
-                    listOngoing = true;
-                    newline = "<ul>" + newline;
-                }
-            } else if (newline == '' || newline == '\n') {
-                return;
-            } else if (listOngoing) {
-                listOngoing = false;
-                newline = "</ul>" + newline;
-            }
-    
-            newOutput.push(newline);
-        });
-    
-        newOutput.push("</ul>");
-        return newOutput;
-    }
-    
-    private rewriteNormalList(output: string[]): string[] {
-        let newOutput: string[] = [];
-    
-        output.forEach((line) => {
-            let newline: string = line.trim();
-    
-            if (this.isTitledList(newline)) {
-                let colonIndex = newline.indexOf(':');
-                newline = "<b>" + newline.slice(0, colonIndex + 1) + "</b>" + newline.slice(colonIndex + 1);
-            }
-    
-            newOutput.push(newline);
-        });
-    
-        return newOutput;
-    }    
-
-    private isOrderedList(text: string):boolean {
-        const ordredListPattern = /\d+\.\s+/;
-        return ordredListPattern.test(text);
-    }
-
-    private isUnorderedList(text: string):boolean {
-        const unordredListPattern = /-\s+/;
-        return unordredListPattern.test(text);
-    }
-
-    private isTitledList(text: string):boolean {
-        if (text.slice(0, text.length/2).includes(':')) {
-            return true;
-        }
-        return false;
-    }
-
 }
