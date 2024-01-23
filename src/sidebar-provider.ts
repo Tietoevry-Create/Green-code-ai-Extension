@@ -11,7 +11,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     _doc?: vscode.TextDocument;
     _context: vscode.ExtensionContext;
     _errorRetry = 0;
-    _highlightLines = true;
+    _highlightLines = false;
     
     _highlightColorList = ['rgba(255, 255, 0, 0.3)', 'rgba(255, 0, 0, 0.3)', 'rgba(0, 255, 0, 0.3)', 'rgba(0, 255, 255, 0.3)'];
     _highlightDecorationTypeList = [vscode.window.createTextEditorDecorationType({

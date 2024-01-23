@@ -32,7 +32,7 @@
     let correctPassword = false;
     let loading = false;
     let errorRequiresRegen = false;
-    let highlightLines = true;
+    let highlightLines = false;
     let completionsDeployment = "";
     let baseUrl = "";
     let apiKey = "";
@@ -893,7 +893,7 @@
                 <br />
                 <label class="checkbox-label" style="display: flex; align-items: center; background-color: transparent; border-color: black; border: 2px solid black; padding: 5px; border-radius: 5px;">
                     <input type="checkbox" bind:checked={highlightLines} on:change={changeHighlightLines} style="margin-right: 8px;">
-                    <span style="font-size: 12px; color: black;">Highlight lines</span>
+                    <span style="font-size: 12px; color: black;">Highlight lines (beta)</span>
                 </label>
                 <br />
             {/if}
