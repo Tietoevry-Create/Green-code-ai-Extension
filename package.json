@@ -1,9 +1,9 @@
 {
   "name": "green-code-ai",
   "displayName": "Green Code AI",
-  "publisher": "Green Coding",
+  "publisher": "Tietoevry",
   "description": "Code review for sustainability and green code practices",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "icon": "static/GC-logo.png",
   "engines": {
     "vscode": "^1.83.0"

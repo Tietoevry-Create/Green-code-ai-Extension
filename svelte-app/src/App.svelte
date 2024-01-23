@@ -41,7 +41,7 @@
 
     let isOpen = {passwordType: false, openaiType: false};
     let selectedOption = {passwordType: '', openaiType: ''};
-    let passwordSelectOptions = ["Ask Everytime", "Ask Every 7 Days"];
+    let passwordSelectOptions = ["Ask every time", "Ask every 7 days"];
     let openaiSelectOptions = ["OpenAI", "Azure OpenAI"];
 
     onMount(() => {

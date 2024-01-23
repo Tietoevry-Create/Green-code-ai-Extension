@@ -2,11 +2,12 @@ export class TextFormatter {
 
     constructor() { }
 
-    public formatText(inputText: string): [string, number[][]] {
+    public formatText(inputText: string, highlightColorList: string[]): [string, number[][]] {
         let output = ["<ul>"];
         let lineNumberList: number[][] = [];
         inputText = inputText.replaceAll('`', '').replace('json', '').replaceAll('<', '').replaceAll('>', '');
         const jsonObj = JSON.parse(inputText);
+        let colorIndex = 0;
 
         for (const key in jsonObj) {
             if (jsonObj.hasOwnProperty(key) && typeof jsonObj[key] === 'object') {
@@ -25,7 +26,11 @@ export class TextFormatter {
                     }
                 }
 
-                output.push("<li>" + line + (lineNumber ? "<br /><b>Line number:</b> " + lineNumber : '') + "</li>");
+                output.push("<li>" + line + 
+                    (lineNumber ? "<br /><span style='" 
+                        + (highlightColorList.length > 0 ? "background-color: " + highlightColorList[colorIndex] : '') 
+                    + "'><b>Line number:</b> " + lineNumber + "</span>" : '') 
+                + "</li>");
                 
                 const ranges = lineNumber.split(",");
 
@@ -45,6 +50,7 @@ export class TextFormatter {
                     }
                 }
 
+                colorIndex = (colorIndex + 1) % highlightColorList.length;
                 lineNumberList.push(lineNumbers);
             }
         }
@@ -58,9 +64,5 @@ export class TextFormatter {
         return array.sort().filter(function(item, pos, ary) {
             return !pos || item != ary[pos - 1];
         });
-    }
-
-    private formatValue(value: any) {
-        
     }
 }

@@ -13,14 +13,15 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     _errorRetry = 0;
     _highlightLines = true;
     
+    _highlightColorList = ['rgba(255, 255, 0, 0.3)', 'rgba(255, 0, 0, 0.3)', 'rgba(0, 255, 0, 0.3)', 'rgba(0, 255, 255, 0.3)'];
     _highlightDecorationTypeList = [vscode.window.createTextEditorDecorationType({
-        backgroundColor: 'rgba(255, 255, 0, 0.3)',
+        backgroundColor: this._highlightColorList[0]
     }), vscode.window.createTextEditorDecorationType({
-        backgroundColor: 'rgba(255, 0, 0, 0.3)'
+        backgroundColor: this._highlightColorList[1]
     }), vscode.window.createTextEditorDecorationType({
-        backgroundColor: 'rgba(0, 255, 0, 0.3)'
+        backgroundColor: this._highlightColorList[2]
     }), vscode.window.createTextEditorDecorationType({
-        backgroundColor: 'rgba(0, 255, 255, 0.3)'
+        backgroundColor: this._highlightColorList[3]
     })];
 
     constructor(private context: vscode.ExtensionContext) {
@@ -229,7 +230,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     let formattedText = '';
                     let lineNumbers: number[][] = [];
                     try {
-                        [formattedText, lineNumbers] = new TextFormatter().formatText(text);
+                        [formattedText, lineNumbers] = new TextFormatter().formatText(text, this._highlightLines ? this._highlightColorList : []);
                     } catch (error) {
                         if (this._errorRetry < 2) {
                             this._view?.webview.postMessage({type: "onRegenResponse", value: ''})
@@ -360,7 +361,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         if (editor) {
             // Clear all decorations in the active editor
             for (let i = 0; i < this._highlightDecorationTypeList.length; i++) {
-                editor.setDecorations(this._highlightDecorationTypeList[i], []);
+                if (this._highlightDecorationTypeList[i]) {
+                    editor.setDecorations(this._highlightDecorationTypeList[i], []);
+                }
             }
         }
     }
