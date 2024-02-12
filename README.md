@@ -28,7 +28,7 @@ Download the Green Code AI extension from VS Code Marketplace.
 
 5. Post-registration/login, you can modify or remove your information at any time by opening the settings menu, represented by a gear icon located at the bottom right-hand corner of the extension's text area.
 
-## Contributing
+## Contributions
 
 We welcome contributions to this project! Here are some ways you can contribute:
 
