@@ -29,6 +29,7 @@ Download the Green Code AI extension from VS Code Marketplace.
 5. Post-registration/login, you can modify or remove your information at any time by opening the settings menu, represented by a gear icon located at the bottom right-hand corner of the extension's text area.
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 ## Contributions
 
 We welcome contributions to this project! Here are some ways you can contribute:
@@ -38,6 +39,11 @@ We welcome contributions to this project! Here are some ways you can contribute:
 2. **Feature Requests**: If you have an idea for a new feature, feel free to create an issue in our GitHub repository. Please provide as much detail as possible about your feature request.
 
 3. **Code Contributions**: If you'd like to contribute code, please start by forking our repository and creating a branch for your feature or fix. Once your code is ready, create a pull request. Be sure to include a detailed description of your changes.
+=======
+## License
+
+This project is licensed under the [MIT License](license.md). Please see the [license.md](license.md) file for the full text.
+>>>>>>> Stashed changes
 =======
 ## License
 
