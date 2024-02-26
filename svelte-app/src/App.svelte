@@ -502,7 +502,6 @@
         padding: 8px;
         border: 1px solid #ccc;
         background-color: #fff;
-        font-family: sans-serif;
         font-family: Arial, Helvetica, sans-serif;
         min-height: 100px;
         white-space: pre-wrap;
