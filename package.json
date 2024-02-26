@@ -4,6 +4,8 @@
   "publisher": "Tietoevry",
   "description": "Code review for sustainability and green code practices",
   "version": "1.0.0",
+  "license": "MIT",
+  "licenseFile": "https://github.com/Tietoevry-Create/Green-code-ai-Extension/blob/main/license.md",
   "icon": "static/GC-logo.png",
   "engines": {
     "vscode": "^1.83.0"

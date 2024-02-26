@@ -1,30 +1,30 @@
+// © Tietotevry Corporation (2024)
+
 // ai-extension.ts
-import * as vscode from 'vscode';
-import { SidebarProvider } from './sidebar-provider.js';
+import * as vscode from "vscode";
+import { SidebarProvider } from "./sidebar-provider.js";
 
 export function activate(context: vscode.ExtensionContext) {
+  // Register the Sidebar Panel
+  const sidebarProvider = new SidebarProvider(context);
 
-	// Register the Sidebar Panel
-	const sidebarProvider = new SidebarProvider(context);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(
+      "green-code-ai-sidebar",
+      sidebarProvider,
+      {
+        webviewOptions: {
+          retainContextWhenHidden: true,
+        },
+      }
+    )
+  );
 
-    context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider(
-            "green-code-ai-sidebar",
-            sidebarProvider,
-            {
-                webviewOptions: {
-                    retainContextWhenHidden: true
-                }
-            }
-        )
-    );
+  // Register a custom command
+  // context.subscriptions.push(vscode.commands.registerCommand('greenCoding.start', () => {
 
-	// Register a custom command
-	// context.subscriptions.push(vscode.commands.registerCommand('greenCoding.start', () => {
-        
-    // }));
-
+  // }));
 }
 
 // this method is called when your extension is deactivated
-export function deactivate() { }
+export function deactivate() {}
