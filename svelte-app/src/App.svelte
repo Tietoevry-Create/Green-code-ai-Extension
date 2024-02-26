@@ -343,15 +343,9 @@
 
 
 <style>
-    @font-face {
-        font-family: DroidSerif;
-        src: url(../../static/DroidSerif-Regular-webfont.woff);
-    }
     
-    @font-face {
-        font-family: DroidSerif;
-        src: url(../../static/DroidSerif-Bold-webfont.woff);
-        font-weight: bold;
+    * {
+        font-family: Arial, Helvetica, sans-serif;
     }
     
     h1 {
@@ -508,7 +502,7 @@
         padding: 8px;
         border: 1px solid #ccc;
         background-color: #fff;
-        font-family: DroidSerif;
+        font-family: Arial, Helvetica, sans-serif;
         min-height: 100px;
         white-space: pre-wrap;
         overflow-y: auto;
