@@ -21,7 +21,7 @@
     "compile": "tsc",
     "watch": "tsc -w",
     "clean": "rimraf out",
-    "build": "cd .\\svelte-app && npx rollup -c && cd .. && type .\\svelte-app\\public\\build\\bundle.css > .\\src\\compiled\\sidebar.css && type .\\svelte-app\\public\\build\\bundle.js > .\\src\\compiled\\sidebar.js && type .\\svelte-app\\public\\build\\bundle.js.map > .\\src\\compiled\\sidebar.map",
+    "build": "cd ./svelte-app && npx rollup -c && cd .. && cp ./svelte-app/public/build/bundle.css > ./src/compiled/sidebar.css && type ./svelte-app/public/build/bundle.js > ./src/compiled/sidebar.js && type ./svelte-app/public/build/bundle.js.map > ./src/compiled/sidebar.map",
     "vscode:prepublish": "npm run esbuild-base -- --minify",
     "esbuild-base": "esbuild ./src/ai-extension.tsx --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node",
     "esbuild": "npm run esbuild-base -- --sourcemap",
