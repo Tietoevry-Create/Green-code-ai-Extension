@@ -65,26 +65,6 @@ For testing the application locally, follow these steps:
     npm run build
     ```
 
-#### Test the svelte-app
-
-1. **Go to the `svelte-app` directory**:
-
-   ```
-   cd svelte-app
-   ```
-
-2. **Test the application**:
-
-   ```
-   npm run dev
-   ```
-
-3. **Start the application**:
-
-   ```
-   npm run start
-   ```
-
 #### Test the VS Code extension
 
 1. **Install `vsce`**, a command-line tool for packaging, publishing and managing VS Code extensionsn [vsce](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#vsce):
@@ -120,7 +100,7 @@ If you encounter a bug while using our project, we would appreciate it if you co
    - Steps to reproduce the bug.
    - Expected behavior.
    - Actual behavior.
-   - Screenshots or screen recordings (if applicable).
+   - Screenshots or screen recordings (if applicable).u
    - Your operating system, browser version, and project version.
 
 3. **Submit the issue**: Once you've filled out all the necessary information, submit the issue.
