@@ -1,3 +1,5 @@
+// © Tietotevry Corporation (2024)
+
 import App from "../components/Sidebar.svelte";
 
 const app = new App({

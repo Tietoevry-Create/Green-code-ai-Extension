@@ -1,3 +1,4 @@
+// © Tietotevry Corporation (2024)
 import App from "./App.svelte";
 
 const app = new App({

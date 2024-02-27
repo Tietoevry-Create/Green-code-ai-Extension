@@ -1,3 +1,4 @@
+<!-- © Tietotevry Corporation (2024) -->
 <script lang="ts">
   import { AESEncryption } from '../../out/aes-encryption';
   import CryptoJS from 'crypto-js';

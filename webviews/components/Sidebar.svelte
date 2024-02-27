@@ -1,3 +1,4 @@
+<!-- © Tietotevry Corporation (2024) -->
 <script lang="ts">
     import { onDestroy, onMount } from "svelte";
     import { fade, fly } from "svelte/transition";
