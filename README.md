@@ -45,6 +45,69 @@ We welcome contributions from everyone. Here are a few ways you can help:
 
 Thank you for your interest in contributing to our project!
 
+## Local development and testing
+
+For testing the application locally, follow these steps:
+
+#### Compile and build the project
+
+1.  **Compile the project**:
+
+    ```
+    npm run compile
+    ```
+
+    You should now see the `out` folder appear at you root directory.
+
+2.  **Build the project**:
+
+    ```
+    npm run build
+    ```
+
+#### Test the svelte-app
+
+1. **Go to the `svelte-app` directory**:
+
+   ```
+   cd svelte-app
+   ```
+
+2. **Test the application**:
+
+   ```
+   npm run dev
+   ```
+
+3. **Start the application**:
+
+   ```
+   npm run start
+   ```
+
+#### Test the VS Code extension
+
+1. **Install `vsce`**, a command-line tool for packaging, publishing and managing VS Code extensionsn [vsce](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#vsce):
+
+   ```
+   npm install -g @vscode/vsce
+   ```
+
+2. **Create a package of the extension**, a `.vsix` file of the extension is created:
+
+   ```
+   vsce package
+   ```
+
+3. **Install the extension**:
+
+   - Go to the Extensions view.
+   - Click **Views and more actions** in the upper right corner.
+   - Select **Install from VSIX**.
+   - Install the `green-code-ai-1.0.0.vsix` file.
+
+4. **Click on the new extension in the left bar and test it on some code!**
+
 ## Reporting Bugs
 
 If you encounter a bug while using our project, we would appreciate it if you could report it to us. Here's how you can do it:
