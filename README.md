@@ -100,7 +100,7 @@ If you encounter a bug while using our project, we would appreciate it if you co
    - Steps to reproduce the bug.
    - Expected behavior.
    - Actual behavior.
-   - Screenshots or screen recordings (if applicable).u
+   - Screenshots or screen recordings (if applicable).
    - Your operating system, browser version, and project version.
 
 3. **Submit the issue**: Once you've filled out all the necessary information, submit the issue.
