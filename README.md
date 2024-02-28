@@ -86,7 +86,15 @@ For testing the application locally, follow these steps:
    - Select **Install from VSIX**.
    - Install the `green-code-ai-1.0.0.vsix` file.
 
-4. **Click on the new extension in the left bar and test it on some code!**
+4. **Open Green Code AI from VS Code's primary sidebar**:
+
+   - If it is your first time using the extension, a registration window will prompt you for your OpenAI API key and other relevant details. You can choose between using an Azure OpenAI resource or an OpenAI account. In both cases, you will need an API key to utilize the tool.
+
+   - If you have already registered your information and have set a password for your account, you might be asked for your password at startup.
+
+5. **Test the extension on some code**:
+
+   - After entering your information and saving or submitting it, you can begin by highlighting a section of your code that you would like to receive feedback on. Then, press "Get Feedback" to receive detailed tips on how to make your code greener.
 
 ## Reporting Bugs
 
